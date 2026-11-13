@@ -17,7 +17,7 @@
 |---|---|---|---|
 | Best for | Trying it out | Solo creators, freelancers | Social/marketing teams |
 | Personas | 3 standard | Standard + 5 custom | Unlimited custom, shared |
-| Voice characters / usage period (new audio only; cached replays are free) | 8,000 (~10 full reads) | 80,000 (~100 full reads) | 200,000 / user (~250 full reads) |
+| Voice characters / usage period (new audio only; cached replays are free) | 12,000 (~15 full reads; raised in Step 7 so 5 posts × 3 voices fit) | 80,000 (~100 full reads) | 200,000 / user (~250 full reads) |
 | Highlight-to-hear | ✓ (counts toward chars) | ✓ | ✓ |
 | Persona reactions | 1 persona per post (the first one you ask is locked in) | All personas | All personas |
 | Voice-to-text composing* | 5 min/mo | 120 min/mo | 300 min/user/mo |
@@ -89,7 +89,7 @@ Assumes Creator-plan ElevenLabs rates (~$0.22 per 1,000 credits) and the Flash m
 
 | Tier | Price | Max voice cost | Est. LLM + STT | Worst-case margin |
 |---|---|---|---|---|
-| Free | $0 | ~$0.88 | ~$0.10 | –$1 / user (acquisition cost) |
+| Free | $0 | ~$1.32 | ~$0.10 | –$1.40 / user (acquisition cost) |
 | Creator | $15 | ~$8.80 | ~$1 | ~$5 (most users won't max out) |
 | Team | $29/user | ~$22 | ~$2 | ~$5 (most users won't max out) |
 

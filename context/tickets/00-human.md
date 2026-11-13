@@ -8,7 +8,7 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - When an agent ticket needs a human step partway through (paste a key, click through real OAuth), split that step into its own `human` ticket and list it under **Blocked by**. Agents never wait on you mid-ticket.
 - Where each value goes (`.env.local`, Netlify env vars): `context/environments.md`. This file tracks the *work*; that file is the reference.
 
-**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking.
+**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges.
 
 ---
 
@@ -28,10 +28,11 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 **Acceptance criteria**
 - [ ] ElevenLabs Starter plan bought ($6)
 - [ ] One API key per environment, each with a credit quota (see `context/environments.md`)
-- [ ] 3 stock voice IDs picked for the standard personas and pasted into this issue as a comment
+- [ ] 3 stock voice IDs picked for the standard personas (The Skeptic, The Scroller, The Fan) and pasted into this issue as a comment
+- [ ] ~8 more stock voice IDs (with a one-line description each) for the custom persona voice list, pasted as a comment (Step 7 V2)
 
 **Blocked by:** none.
-**Blocks:** Step 1 T3.
+**Blocks:** Step 1 T3; Step 7 V2, V3.
 
 ---
 
@@ -107,3 +108,17 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - [ ] Namecheap nameservers point to Cloudflare (steps in `project-bible.md` → Domain + DNS)
 
 **Blocked by:** none. **Blocks:** nothing (production starts on `netlify.app`).
+
+---
+
+## H10 · `chore: generate static audio files`
+**Labels:** `MVP`, `human`, `audio`
+**Acceptance criteria**
+- [ ] On a branch (`chore/<N>-static-audio`), `.env.local` has the **local** ElevenLabs key; run `npm run audio:static` and confirm the character estimate (~5,000 chars ≈ 2,500 Flash credits)
+- [ ] Files exist: `/public/voices/*.mp3` (one per custom voice), `/public/demo/landing-*.mp3` (3), `/public/demo/*.mp3` sample reads (3); listen to each once
+- [ ] Commit + open a PR to `dev`; the coordinator merges it
+- [ ] Re-run with `--force` only if the sample post text or a voice changes
+
+**Blocked by:** Step 7 V16, H2.
+**Blocks:** nothing hard (V14 previews and the sample post fall back to "Preview unavailable" / no audio until then); needed before the demo.
+

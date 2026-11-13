@@ -149,7 +149,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Unit/integration tests for all 7 billing presets (P14) with a fixed clock
 - [ ] Works on desktop 1280px+: n/a, no UI
 
-**Plan behavior:** Free: posts limit 5, 8,000 chars. Creator: posts `null` (unlimited), 80,000 chars.
+**Plan behavior:** Free: posts limit 5, 12,000 chars (raised in Step 7). Creator: posts `null` (unlimited), 80,000 chars.
 **Blocked by:** Step 1 T4, T6; P14 (tests use the presets; can start with inline data).
 **Files likely touched:** `src/server/usage-summary.ts`, tests
 **Out of scope:** UI (P10, P15).
@@ -159,7 +159,7 @@ No Step 5 migration: the schema already has every billing column.
 ## P10 · `feat: billing settings page`
 **Labels:** `MVP`, `billing`, `pages`
 **Acceptance criteria**
-- [ ] `/app/settings/billing` shows the plan line ("Creator · renews Dec 12" / "Creator · ends Dec 12" / "Free"), posts meter ("3 of 5 posts reviewed" / "Unlimited"), characters meter ("6,200 of 8,000 voice characters left"), "Resets {date}"
+- [ ] `/app/settings/billing` shows the plan line ("Creator · renews Dec 12" / "Creator · ends Dec 12" / "Free"), posts meter ("3 of 5 posts reviewed" / "Unlimited"), characters meter ("6,200 of 12,000 voice characters left"), "Resets {date}"
 - [ ] Free: "Upgrade" (P4); Creator/canceling/past_due: "Manage billing" (P7)
 - [ ] E2E: `free`, `free-at-limit`, `creator`, `creator-canceling` render correctly
 - [ ] Works on desktop 1280px+
@@ -196,7 +196,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above.
-**Blocked by:** P4, P9, Step 7 playback (wiring point).
+**Blocked by:** P4, P9; Step 7 V7, V10 (wiring point).
 **Files likely touched:** `src/components/LimitReached/*`, `src/content/copy.ts`, `e2e/limits.spec.ts`
 **Out of scope:** character top-ups (stretch).
 

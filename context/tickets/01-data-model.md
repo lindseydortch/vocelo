@@ -93,7 +93,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] `refund(eventId)` deletes the event, and sample posts (`is_sample`) never consume anything
 - [ ] Works on desktop 1280px+: n/a, no UI
 
-**Plan behavior:** Free: 5 posts, 8,000 characters. Creator: unlimited posts, 80,000 characters. 60 LLM calls/hour on every plan.
+**Plan behavior:** Free: 5 posts, 12,000 characters (raised in Step 7). Creator: unlimited posts, 80,000 characters. 60 LLM calls/hour on every plan.
 **Blocked by:** T2, T4, T5.
 **Files likely touched:** `src/server/usage.ts`, `src/server/usage.test.ts`
 **Out of scope:** usage meters UI, upgrade prompts, Stripe.

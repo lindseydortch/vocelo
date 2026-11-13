@@ -69,7 +69,7 @@ Infra tickets (Step 2, before build day; scaffold merges alone) → DB schema + 
         ↓
    Lane A                 Lane B                     Lane C
    Sign-in (OAuth)        Personas + TTS             Composer editor + char limits
-     ↓                    (dev API key, no auth)       + page route stubs
+     ↓                    (/__dev/login + requireUser)  + page route stubs
    Buffer drafts            ↓                          ↓
    + channels             Reactions + Tone read      Billing (Stripe) → real usage module
      ↓                      ↓                          ↓
@@ -78,7 +78,7 @@ Infra tickets (Step 2, before build day; scaffold merges alone) → DB schema + 
                               ↓
                          Design Pass
 ```
-The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsage` from day one, and Lane C swaps in the real implementation without touching Lane B's code.
+The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund` (T5) from day one, and Lane C swaps in the real implementation without touching Lane B's code.
 
 ### Dependency map (Grilling Guide areas, build order)
 | Order | Area | Needs first | Parallel with |
@@ -87,7 +87,7 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 | 2 | Infra + repo setup | 1 | — (scaffold merges alone) |
 | 3 | Buffer sign-in | 2 | Composer, Personas + playback |
 | 3 | Composer | 2 | Sign-in, Personas + playback |
-| 3 | Personas + playback | 2 (dev API key) | Sign-in, Composer |
+| 3 | Personas + playback | 2 (`/__dev/login`) | Sign-in, Composer |
 | 4 | Buffer integration | Sign-in | Billing, Reactions + tone |
 | 4 | Billing | Data model, Sign-in | Buffer integration, Reactions + tone |
 | 4 | Reactions + tone | Personas, LLM decision | Buffer integration, Billing |
@@ -121,7 +121,7 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 - Safety cap on every plan: **60 LLM calls / hour / user** (counted via `usage_events.kind = llm_call`).
 
 ### Usage rules
-- **Two meters, posts first.** Free: **5 reviewed posts** + 8,000 voice characters. Creator: unlimited posts (fair use) + 80,000 characters. Whichever runs out first blocks new audio.
+- **Two meters, posts first.** Free: **5 reviewed posts** + 12,000 voice characters (raised from 8,000 in Step 7). Creator: unlimited posts (fair use) + 80,000 characters. Whichever runs out first blocks new audio.
 - **Only new audio uses voice characters.** Audio cache key = `sha256(model | voiceId | text)`, shared across users.
 - **Reviewed post** = the first thing that costs money (new TTS incl. highlight-to-hear, a reaction, or a Tone read). Imports, cached replays, and the sample post never count.
 - **Too big for what's left** (e.g. 800 chars needed, 500 left) → blocked, no partial read: "800 characters needed, 500 left. Highlight a shorter section or upgrade." Cached audio for posts already reviewed this period still plays.
@@ -371,7 +371,7 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
 | Canceled page | "No changes made" + back to `/pricing`. Nothing written. |
 | Customer Portal | "Manage billing" creates a portal session (`return_url` = `/app/settings/billing`). Portal allows card update, invoices, **cancel at period end only**, undo cancel; no plan switching, no pause. Fake/unknown customer (seed users) → "Billing isn't set up for this test account." Stripe down → "Couldn't open billing. Try again." |
 | Pricing page | Signed out: Creator CTA → `/signin?returnTo=/pricing` (no auto-checkout). Free: "Upgrade". Creator: "Current plan" + "Manage billing". Team: disabled "Coming soon". |
-| Meters | Billing settings: plan line ("Creator · renews Dec 12" / "Creator · ends Dec 12" / "Payment failed"), posts meter ("3 of 5 posts reviewed" / "Unlimited"), characters meter ("6,200 of 8,000 voice characters left"), "Resets Dec 12". Composer shows a compact version. |
+| Meters | Billing settings: plan line ("Creator · renews Dec 12" / "Creator · ends Dec 12" / "Payment failed"), posts meter ("3 of 5 posts reviewed" / "Unlimited"), characters meter ("6,200 of 12,000 voice characters left"), "Resets Dec 12". Composer shows a compact version. |
 | past_due | Banner in Billing settings + composer: "Your last payment failed. Update your card to keep Creator." → Portal. User keeps Creator during retries. |
 | Limit reached | New audio, reactions, Tone read blocked; cached ones still play. Free: "Upgrade to Creator" → Checkout. Creator out of characters: "Resets {date}", no upsell (Team coming soon). |
 | Locked teaser card | Free: "🔒 N posts older than 30 days. Upgrade to see them" → Checkout. Creator: "🔒 N posts older than 12 months. Team is coming soon", no button. |
@@ -441,6 +441,56 @@ None. `posts.text` and `posts.last_edited_at` already exist.
 
 ### Tickets
 Step 6 drafts 14 tickets (`context/tickets/06-composer.md`).
+
+---
+
+## Step 7 Decisions: Personas + playback (agreed 2026-11-12)
+
+### Personas
+| Topic | Decision |
+|---|---|
+| Standard trio | **The Skeptic** (peer who spots humblebrags + vague claims), **The Scroller** (busy reader, only gets the first line), **The Fan** (warm supporter, says what works). One distinct stock voice each (H2). Copy stays placeholder. |
+| Free playback | All 3 standard personas for read-aloud + highlight-to-hear. "1 persona per post" is a **reactions** rule only (Step 8). |
+| Custom fields | Name 1–40, bio ≤ 160, "Who is this reader?" 1–500 (fed into the reaction template), voice from ~8 stock voices (`src/lib/voices.ts`), avatar from ~12 placeholder icons (`src/lib/avatars.ts`; uploads are stretch). Creating/editing never calls the LLM, never consumes usage. |
+| Limit | Creator (incl. `past_due`, canceling): **5 non-deleted** custom personas; create locks the user row so concurrent creates can't make a 6th. At 5: "Delete one to add another." |
+| Editing | Every field editable; new `personas.updated_at`. Reactions older than it show "Persona changed: refresh" (Step 8). Audio needs nothing: voice ID is in the cache key. |
+| Delete | Soft delete on every plan (Free can delete locked ones). Old reactions keep the name; cached audio untouched. |
+| Free / downgraded | Custom personas shown as locked cards ("Upgrade to use") on `/app/personas` and in the picker; server rejects use with `PERSONA_LOCKED`. Never-paid Free sees one locked "Create your own reader" card → Checkout. |
+| Picker | Remembered per post in `localStorage` (`vocelo:persona:{userId}:{postId}`); default The Skeptic; deleted/locked → default. |
+| Voice previews | Static files, no credits: `npm run audio:static` (V16) writes `/public/voices/` previews, 3 landing clips, and the sample post's 3 reads to `/public/demo/`; the human runs it once (H10). Sample text lives in `src/content/sample-post.ts`. |
+
+### Playback
+| Topic | Decision |
+|---|---|
+| Cap | A read is capped at **the post's channel limit** via `countFor()` (X 280, LinkedIn 3,000, Substack 10,000, Mastodon `maxCharacters` ?? 500; sample = LinkedIn). Over the limit: "Read aloud" disabled ("Over X's 280 limit. Trim it or highlight a section to hear it."); a selection within the limit can still be heard. |
+| Generation | Model `eleven_flash_v2_5`, `mp3_44100_64`, default voice settings, 45 s timeout. Whole file, **no streaming**; written to Netlify Blobs (`consistency: 'strong'`); returns `{ audioUrl: '/api/audio/<key>' }`. |
+| Order of operations | `flush()` → server reads text from DB → validate (post visible, persona allowed, selection matches stored slice, not blank, within cap) → **cache check** (hit = free, no usage, no review) → `checkAndConsume(tts_chars, text.length)` → ElevenLabs → store. Any provider failure refunds. |
+| Voice characters | `.length` of the normalized text actually sent (UTF-16; spaces + emoji count). |
+| Multiple voices | Same post, 3 voices = **1 reviewed post** but **3× voice characters** (each voice is new audio). Replays of the same voice + text are free, across users. |
+| Providers | `browser`: same server path incl. usage, no blob, client speaks with `speechSynthesis` (limits behave locally like production). `fixture`: short silent mp3. |
+| Double clicks | Button shows "Generating…" and is disabled. Two identical concurrent requests may both generate and both charge (accepted). |
+| Errors | 429/concurrency → "Voices are busy. Try again in a few seconds." · our quota used up → "Voice is unavailable right now." (logged) · 5xx/timeout → "Couldn't generate audio. Try again." · usage → P12 `LimitReached`. |
+| Player | One clip at a time (new one stops the old); Play/Pause, Stop, progress bar; no speed, no scrubbing. Editing mid-read keeps playing + "Text changed since this read." Leaving the page stops audio. |
+| Sample post | Only the 3 standard personas' static full reads from `/public/demo/`. Highlight-to-hear + custom personas disabled ("Try this on your own post"). Never calls ElevenLabs except under `DEMO_FALLBACK`. |
+| Audio route | `GET /api/audio/:key` requires sign-in; any signed-in user may fetch any key (shared cache, unguessable sha256). `Cache-Control: private, max-age=31536000, immutable`. |
+| Plans | Playback buttons identical on every plan; Free vs Creator differ only in usage limits (T6) and custom persona access. |
+
+### Pricing change
+- **Free voice characters: 8,000 → 12,000** (5 posts × 3 voices × 800 chars). Worst-case Free cost ~$0.88 → ~$1.32. Updated in `pricing-tiers.md`, T6, P9, P10.
+
+### Schema additions (additive migration)
+- `personas.updated_at` (timestamptz, default `now()`, backfilled to `created_at`)
+
+### Conflicts flagged
+- **Critical path:** Lane B used "dev API key, no auth"; it now signs in with `/__dev/login` and every server fn calls `requireUser()`. Stub names fixed to `checkAndConsume` / `refund`.
+- **Step 5 P12:** "Step 7 playback (wiring point)" → blocked by V7 + V10.
+- **Step 1 T6 / Step 5 P9, P10:** Free character limit now 12,000; P14's `free-low-chars` stays "500 left".
+- **Step 8 (reactions):** handle "Persona changed: refresh"; treat "Who is this reader?" as quoted data, never instructions (prompt-injection guard); V13's `buildReactionPrompt` is a placeholder Step 8 finalizes.
+- **Step 10 (pages):** sample post text comes from `src/content/sample-post.ts`; landing showcase uses `/demo/landing-<persona>.mp3`.
+- **H2:** also picks ~8 custom voices. New **H10** runs the static audio script.
+
+### Tickets
+Step 7 drafts 16 tickets (`context/tickets/07-personas-playback.md`) + human ticket H10.
 
 ---
 
@@ -541,8 +591,8 @@ Step 6 drafts 14 tickets (`context/tickets/06-composer.md`).
 | Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
 | History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
 | Billing | Webhook signature check (raw body); idempotency via `stripe_events` in the same transaction; out-of-order events can't roll back (re-fetch); unknown customer → 200; success page before the webhook lands; already-Creator can't open Checkout; canceling / past_due / canceled status mapping; Free period restarts when a subscription ends; Customer Portal link + fake-customer message; all 7 test presets |
-| Personas | Standard personas exist via migration; Creator limit of 5 custom; Free blocked; soft delete keeps old reactions' names; downgrade locks custom personas; Free "1 persona per post" locks in |
-| Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters |
+| Personas | Standard personas exist via migration; Creator limit of 5 custom (concurrent creates can't make a 6th); Free blocked + `PERSONA_LOCKED`; field validation; edit bumps `updated_at`; soft delete keeps old reactions' names; downgrade locks custom personas; Free "1 persona per post" locks in (reactions only) |
+| Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters; over-channel-limit read rejected; stale selection rejected; provider failure refunds; sample post never consumes; `/api/audio` requires sign-in |
 | Reactions + Tone read | Schema-valid JSON parsed; invalid JSON → retry once → friendly error, nothing consumed; cache by text hash; "Text changed: refresh"; 60 LLM calls / hour cap |
 | Versions + scheduling | Version only on successful Buffer save + changed text; restore doesn't rewrite history; schedule with `dueAt` (timezone per Step 9) |
 | Pages | E2E happy path per page; empty, loading, and limit-reached states render; protected routes redirect to sign-in |
@@ -598,7 +648,7 @@ Full rules: "Step 5 Decisions". Tickets: `context/tickets/05-billing.md`.
   - UI note that Buffer drafts are unaffected and always remain in Buffer
   - Locked data is hidden, not deleted (upgrading unlocks it instantly)
 - [ ] Posts-reviewed limit (**Free: 5** per usage period); a post counts the first time it triggers anything that costs money (see Step 1 Decisions)
-- [ ] Usage tracking + counters ("6,200 of 8,000 voice characters left"), reset per **usage period** (Free: signup anniversary; paid: Stripe billing period; see Kickoff Decisions)
+- [ ] Usage tracking + counters ("6,200 of 12,000 voice characters left"), reset per **usage period** (Free: signup anniversary; paid: Stripe billing period; see Kickoff Decisions)
 - [ ] Locked-feature UI + upgrade prompts
 - [ ] Stripe test mode for demo (card `4242 4242 4242 4242`)
 
@@ -623,16 +673,18 @@ Full rules: "Step 6 Decisions". Tickets: `context/tickets/06-composer.md`.
 - [ ] "Feeling stuck?" hint (shown only while the post is blank): suggest speaking the post with Wispr Flow or OS dictation, then pasting it in (no built-in voice-to-text in MVP)
 
 ### 6. Personas
-- [ ] Persona model: name, bio, voice avatar (static image/icon), ElevenLabs voice ID, reaction prompt
-- [ ] 3 standard personas (Free)
-- [ ] Persona picker (voice avatar cards)
-- [ ] Custom voice avatars — paid tiers (name, bio, pick an image/icon, pick an ElevenLabs voice). **Never cut** (demo upgrade trigger).
+Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.md`.
+- [ ] Persona model: name, bio, voice avatar (icon from a fixed set), ElevenLabs voice ID, reader description, reaction prompt, `updated_at`
+- [ ] 3 standard personas on every plan: The Skeptic, The Scroller, The Fan
+- [ ] Persona picker (voice avatar cards; remembered per post; locked cards on Free)
+- [ ] Custom personas — Creator, max 5 (name, bio, "Who is this reader?", icon, voice from ~8 with static previews); edit + soft delete. **Never cut** (demo upgrade trigger).
 
 ### 7. Playback
-- [ ] Read full post in persona's voice (ElevenLabs TTS, Flash model)
-- [ ] Highlight-to-hear (read selection only)
+- [ ] Read full post in persona's voice (ElevenLabs TTS, Flash model), capped at the channel's character limit
+- [ ] Highlight-to-hear (read selection only; works even when the post is over the limit)
 - [ ] Simple "speaking" indicator on the active voice avatar (e.g., glow or pulse — no character animation)
-- [ ] Audio caching (don't regenerate unchanged text)
+- [ ] Audio caching (don't regenerate unchanged text; shared across users; hits are free)
+- [ ] Static audio (voice previews, landing clips, sample post reads) generated once by `npm run audio:static`
 
 ### 8. Analysis
 - [ ] Persona reaction (LLM, 1–2 sentences), gated by plan
