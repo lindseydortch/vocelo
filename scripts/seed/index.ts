@@ -13,12 +13,14 @@ type SeedDb = ReturnType<typeof drizzle>
  * (real users) is never matched. Deleting a user cascades to its rows.
  */
 export const SEED_TAG = 'seed_'
+/** LIKE pattern for the tag; `_` is a wildcard in LIKE, so it is escaped. */
+export const SEED_LIKE = `${SEED_TAG.replaceAll('_', '\\_')}%`
 const DAY = 86_400_000
 
 /** Deletes every seed user, then re-creates one per purchasable plan. */
 export async function runSeed(db: SeedDb, now = new Date()): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx.delete(users).where(like(users.bufferAccountId, `${SEED_TAG}%`))
+    await tx.delete(users).where(like(users.bufferAccountId, SEED_LIKE))
     await tx.insert(users).values([
       {
         bufferAccountId: `${SEED_TAG}free`,

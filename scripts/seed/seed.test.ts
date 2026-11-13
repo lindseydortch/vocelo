@@ -5,14 +5,15 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { users } from '~/db/schema'
 import { createTestDb, testDatabaseUrl } from '~/test/db'
 import { checkSeedTarget } from './guard'
-import { SEED_TAG, runSeed } from './index'
+import { SEED_LIKE, runSeed } from './index'
 
 const script = fileURLToPath(new URL('./index.ts', import.meta.url))
 const { db } = createTestDb()
 
 afterEach(async () => {
-  await db.delete(users).where(like(users.bufferAccountId, `${SEED_TAG}%`))
+  await db.delete(users).where(like(users.bufferAccountId, SEED_LIKE))
   await db.delete(users).where(eq(users.bufferAccountId, 'real_user'))
+  await db.delete(users).where(eq(users.bufferAccountId, 'seedXreal'))
 })
 
 describe('checkSeedTarget', () => {
@@ -62,7 +63,7 @@ describe('seed script', () => {
     const [row] = await db
       .select({ n: count() })
       .from(users)
-      .where(like(users.bufferAccountId, `${SEED_TAG}%`))
+      .where(like(users.bufferAccountId, SEED_LIKE))
     expect(row?.n).toBe(0)
   })
 
@@ -75,7 +76,7 @@ describe('seed script', () => {
     const rows = await db
       .select()
       .from(users)
-      .where(like(users.bufferAccountId, `${SEED_TAG}%`))
+      .where(like(users.bufferAccountId, SEED_LIKE))
     expect(rows).toHaveLength(2)
   })
 })
@@ -86,7 +87,7 @@ describe('runSeed', () => {
     const rows = await db
       .select()
       .from(users)
-      .where(like(users.bufferAccountId, `${SEED_TAG}%`))
+      .where(like(users.bufferAccountId, SEED_LIKE))
     const free = rows.find((r) => r.plan === 'free')
     const creator = rows.find((r) => r.plan === 'creator')
     expect(free?.subscriptionStatus).toBeNull()
@@ -100,12 +101,21 @@ describe('runSeed', () => {
       bufferAccountId: 'real_user',
       bufferOrganizationId: 'real_org',
     })
+    await db.insert(users).values({
+      bufferAccountId: 'seedXreal',
+      bufferOrganizationId: 'real_org2',
+    })
     await runSeed(db)
     await runSeed(db)
+    const lookalike = await db
+      .select({ n: count() })
+      .from(users)
+      .where(eq(users.bufferAccountId, 'seedXreal'))
+    expect(lookalike[0]?.n).toBe(1)
     const seeded = await db
       .select({ n: count() })
       .from(users)
-      .where(like(users.bufferAccountId, `${SEED_TAG}%`))
+      .where(like(users.bufferAccountId, SEED_LIKE))
     const real = await db
       .select({ n: count() })
       .from(users)
