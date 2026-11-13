@@ -32,14 +32,12 @@ afterAll(() => sql.end())
 
 async function setup() {
   const user = await createTestUser()
-  await testDb
-    .insert(bufferConnections)
-    .values({
-      userId: user.id,
-      accessTokenEnc: encryptToken('old'),
-      refreshTokenEnc: encryptToken('refresh'),
-      accessExpiresAt: new Date(Date.now() + 3600000),
-    })
+  await testDb.insert(bufferConnections).values({
+    userId: user.id,
+    accessTokenEnc: encryptToken('old'),
+    refreshTokenEnc: encryptToken('refresh'),
+    accessExpiresAt: new Date(Date.now() + 3600000),
+  })
   clearSession.mockClear()
   server.use(
     http.post('https://auth.buffer.com/token', () =>
@@ -118,4 +116,30 @@ it('passes rate limits through without clearing the connection', async () => {
       .where(eq(bufferConnections.userId, id)),
   ).toHaveLength(1)
   expect(clearSession).not.toHaveBeenCalled()
+})
+
+it('preserves a connection replaced while the retry is in flight', async () => {
+  const id = await setup()
+  let calls = 0
+  server.use(
+    http.post(BUFFER_GRAPHQL_URL, async () => {
+      calls++
+      if (calls === 2) {
+        await testDb
+          .update(bufferConnections)
+          .set({ accessTokenEnc: encryptToken('replacement') })
+          .where(eq(bufferConnections.userId, id))
+      }
+      return new HttpResponse(null, { status: 401 })
+    }),
+  )
+  await expect(withBuffer(id, request)).rejects.toMatchObject({
+    code: 'BUFFER_AUTH_EXPIRED',
+  })
+  expect(
+    await testDb
+      .select()
+      .from(bufferConnections)
+      .where(eq(bufferConnections.userId, id)),
+  ).toHaveLength(1)
 })
