@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 const script = fileURLToPath(new URL('./ticket-next.sh', import.meta.url))
 
-type Issue = { number: number; title: string; labels: string[] }
+type Issue = { number: number; title: string; labels: string[]; body?: string }
 
 // Fake `gh` (issues come from FAKE_ISSUES) and fake `git` (no remote branches).
 function run(issues: Issue[], args: string[]) {
@@ -28,7 +28,7 @@ else if (a[0] === 'pr') process.stdout.write('[]')`,
     title: i.title,
     state: 'OPEN',
     stateReason: null,
-    body: '',
+    body: i.body ?? '',
     blockedBy: { nodes: [] },
     labels: i.labels.map((name) => ({ name })),
   }))
@@ -64,5 +64,44 @@ describe('ticket-next.sh on-hold', () => {
     expect(ready).toContain('#1 feat: normal')
     expect(ready).not.toContain('#2')
     expect(rest).toContain('#2 fix: held')
+  })
+})
+
+describe('ticket-next.sh MVP/stretch grouping', () => {
+  it('lists MVP before stretch, then unlabeled, within Ready', () => {
+    const r = run(
+      [
+        { number: 10, title: 'feat: later', labels: ['stretch'] },
+        { number: 11, title: 'feat: core', labels: ['MVP'] },
+        { number: 12, title: 'chore: plain', labels: [] },
+      ],
+      [],
+    )
+    const ready = r.stdout.split('In progress')[0] ?? ''
+    const mvp = ready.indexOf('[MVP]')
+    const stretch = ready.indexOf('[Stretch]')
+    const other = ready.indexOf('[Unlabeled]')
+    expect(mvp).toBeGreaterThan(-1)
+    expect(mvp).toBeLessThan(stretch)
+    expect(stretch).toBeLessThan(other)
+    expect(ready.indexOf('#11')).toBeGreaterThan(mvp)
+    expect(ready.indexOf('#11')).toBeLessThan(stretch)
+    expect(ready.indexOf('#10')).toBeGreaterThan(stretch)
+    expect(ready.indexOf('#12')).toBeGreaterThan(other)
+  })
+
+  it('shows an MVP ticket blocked by a stretch ticket as blocked, not ready', () => {
+    const r = run(
+      [
+        { number: 20, title: 'feat: needs stretch', labels: ['MVP'], body: '**Blocked by:** #21' },
+        { number: 21, title: 'feat: stretch dep', labels: ['stretch'] },
+      ],
+      [],
+    )
+    const [ready = '', blocked = ''] = r.stdout.split('Blocked (do not start)')
+    expect(ready).not.toContain('#20')
+    expect(ready).toContain('#21')
+    expect(blocked).toContain('[MVP]')
+    expect(blocked).toContain('#20 feat: needs stretch')
   })
 })

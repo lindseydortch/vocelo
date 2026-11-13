@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ticket-next.sh             → Ready / In progress / Your queue / Blocked
+# ticket-next.sh             → Ready / In progress / Your queue / On hold / Blocked (each: MVP, then stretch, then unlabeled)
 # ticket-next.sh --check <N> → exit 1 if #N is closed, human, on-hold, or blocked (ticket-start.sh runs this)
 set -euo pipefail
 
@@ -34,6 +34,7 @@ REPORT=$(jq --argjson merged "$MERGED" --argjson branches "$BRANCHES" '
             elif any($merged[]; test("^[a-z]+/\($b)-")) then empty
             else {n:$b, why:"closed, but no merged PR"} end)
       | {number:$i.number, title:$i.title, human:($i|human), hold:($i|hold),
+         mvp:($i|any(.labels[]; .name == "MVP")), stretch:($i|any(.labels[]; .name == "stretch")),
          branch: branch_for($i.number), unresolved: .})
 ' <<<"$ISSUES")
 
@@ -54,11 +55,23 @@ if [ "${1:-}" = "--check" ]; then
   exit 0
 fi
 
+# section <jq row filter> <jq line expr>: prints matching rows grouped MVP, then stretch, then unlabeled.
+section() {
+  local g label
+  for g in mvp stretch other; do
+    case "$g" in mvp) label="MVP";; stretch) label="Stretch";; *) label="Unlabeled";; esac
+    local out
+    out=$(jq -r --arg g "$g" "
+      def grp: if .mvp then \"mvp\" elif .stretch then \"stretch\" else \"other\" end;
+      .[] | select($1) | select(grp == \$g) | $2" <<<"$REPORT")
+    [ -z "$out" ] || { echo "  [$label]"; echo "$out"; }
+  done
+}
+
 echo "✅ Ready (agent tickets, nothing blocking):"
-jq -r '.[] | select((.human|not) and (.hold|not) and (.unresolved|length == 0) and .branch == null)
-  | "   #\(.number) \(.title)"' <<<"$REPORT"
+section '(.human|not) and (.hold|not) and (.unresolved|length == 0) and .branch == null' '"   #\(.number) \(.title)"'
 echo; echo "🔨 In progress (branch exists):"
-jq -r '.[] | select(.branch != null) | "   #\(.number) \(.title) · \(.branch)"' <<<"$REPORT"
+section '.branch != null' '"   #\(.number) \(.title) · \(.branch)"'
 echo; echo "🙋 Your queue (human tickets, most-unblocking first):"
 jq -r '. as $all | map(select(.human))
   | map(. as $h | .blocks = ([$all[] | select(any(.unresolved[]; .n == $h.number))] | length))
@@ -66,7 +79,6 @@ jq -r '. as $all | map(select(.human))
   | "   #\(.number) \(.title) · unblocks \(.blocks)"
     + (if (.unresolved|length) > 0 then " · waiting on " + ([.unresolved[].n | "#\(.)"] | join(", ")) else "" end)' <<<"$REPORT"
 echo; echo "⏸  On hold (do not start):"
-jq -r '.[] | select(.hold and (.human|not)) | "   #\(.number) \(.title)"' <<<"$REPORT"
+section '.hold and (.human|not)' '"   #\(.number) \(.title)"'
 echo; echo "⛔ Blocked (do not start):"
-jq -r '.[] | select((.human|not) and (.hold|not) and (.unresolved|length > 0))
-  | "   #\(.number) \(.title) ← " + ([.unresolved[] | "#\(.n) \(.why)"] | join(", "))' <<<"$REPORT"
+section '(.human|not) and (.hold|not) and (.unresolved|length > 0)' '"   #\(.number) \(.title) ← " + ([.unresolved[] | "#\(.n) \(.why)"] | join(", "))'
