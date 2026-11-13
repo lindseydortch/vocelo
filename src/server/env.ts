@@ -7,7 +7,12 @@ const baseSchema = z.object({
   APP_URL: z.url({ error: 'APP_URL must be a URL' }),
   DATABASE_URL: required('DATABASE_URL'),
   SESSION_SECRET: required('SESSION_SECRET'),
-  TOKEN_ENCRYPTION_KEY: required('TOKEN_ENCRYPTION_KEY'),
+  TOKEN_ENCRYPTION_KEY: required('TOKEN_ENCRYPTION_KEY').refine(
+    (v) =>
+      /^[A-Za-z0-9+/]+={0,2}$/.test(v) &&
+      Buffer.from(v, 'base64').length === 32,
+    'TOKEN_ENCRYPTION_KEY must be 32 bytes, base64-encoded (generate: openssl rand -base64 32)',
+  ),
   BUFFER_CLIENT_ID: required('BUFFER_CLIENT_ID'),
   BUFFER_CLIENT_SECRET: required('BUFFER_CLIENT_SECRET'),
   STRIPE_SECRET_KEY: required('STRIPE_SECRET_KEY'),
