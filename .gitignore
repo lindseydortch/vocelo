@@ -1,5 +1,6 @@
 .env
 .env.*
+!.env.example
 .ticket.env
 .browser-profiles/
 playwright-report/
