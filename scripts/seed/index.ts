@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { users } from '../../src/db/schema.ts'
 import { checkSeedTarget } from './guard.ts'
+import { seedPostsFor } from './posts.ts'
 
 type SeedDb = ReturnType<typeof drizzle>
 
@@ -17,30 +18,34 @@ export const SEED_TAG = 'seed_'
 export const SEED_LIKE = `${SEED_TAG.replaceAll('_', '\\_')}%`
 const DAY = 86_400_000
 
-/** Deletes every seed user, then re-creates one per purchasable plan. */
+/** Deletes every seed user, then re-creates one per purchasable plan, each with backdated posts. */
 export async function runSeed(db: SeedDb, now = new Date()): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.delete(users).where(like(users.bufferAccountId, SEED_LIKE))
-    await tx.insert(users).values([
-      {
-        bufferAccountId: `${SEED_TAG}free`,
-        bufferOrganizationId: `${SEED_TAG}org_free`,
-        email: 'seed-free@example.test',
-        plan: 'free',
-      },
-      {
-        bufferAccountId: `${SEED_TAG}creator`,
-        bufferOrganizationId: `${SEED_TAG}org_creator`,
-        email: 'seed-creator@example.test',
-        plan: 'creator',
-        stripeCustomerId: `cus_${SEED_TAG}creator`,
-        stripeSubscriptionId: `sub_${SEED_TAG}creator`,
-        subscriptionStatus: 'active',
-        currentPeriodStart: now,
-        currentPeriodEnd: new Date(now.getTime() + 30 * DAY),
-        periodAnchorAt: now,
-      },
-    ])
+    const seeded = await tx
+      .insert(users)
+      .values([
+        {
+          bufferAccountId: `${SEED_TAG}free`,
+          bufferOrganizationId: `${SEED_TAG}org_free`,
+          email: 'seed-free@example.test',
+          plan: 'free',
+        },
+        {
+          bufferAccountId: `${SEED_TAG}creator`,
+          bufferOrganizationId: `${SEED_TAG}org_creator`,
+          email: 'seed-creator@example.test',
+          plan: 'creator',
+          stripeCustomerId: `cus_${SEED_TAG}creator`,
+          stripeSubscriptionId: `sub_${SEED_TAG}creator`,
+          subscriptionStatus: 'active',
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 30 * DAY),
+          periodAnchorAt: now,
+        },
+      ])
+      .returning()
+    for (const user of seeded) await seedPostsFor(tx, user, now)
   })
 }
 
@@ -61,7 +66,7 @@ if (isEntry) {
   })
   try {
     await runSeed(drizzle(sql, { casing: 'snake_case' }))
-    console.log('seed: done (free + creator users)')
+    console.log('seed: done (free + creator users with posts)')
   } finally {
     await sql.end()
   }
