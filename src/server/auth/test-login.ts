@@ -67,13 +67,20 @@ async function ensureTestUser(kind: TestLoginUser): Promise<string> {
   return user.id
 }
 
-/** `/__test/login?user=free|creator`: signs in a seeded user and redirects to `/app`. */
+/** Fixed id for `db=off` sign-ins: a valid cookie with no user row behind it. */
+export const DB_OFF_USER_ID = '00000000-0000-4000-8000-00000000e2e0'
+
+/**
+ * `/__test/login?user=free|creator`: signs in a seeded user and redirects to `/app`.
+ * `&db=off` only sets the cookie (no DB rows) for specs that just need "signed in" to the cookie check.
+ */
 export async function handleTestLogin(request: Request): Promise<Response> {
   if (!isTestLoginEnabled()) return new Response('Not found', { status: 404 })
   const kind = new URL(request.url).searchParams.get('user')
   if (!isTestLoginUser(kind)) {
     return new Response('user must be free or creator', { status: 400 })
   }
-  setSessionUser(await ensureTestUser(kind))
+  const dbOff = new URL(request.url).searchParams.get('db') === 'off'
+  setSessionUser(dbOff ? DB_OFF_USER_ID : await ensureTestUser(kind))
   return new Response(null, { status: 302, headers: { Location: '/app' } })
 }
