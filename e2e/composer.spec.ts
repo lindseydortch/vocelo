@@ -56,7 +56,7 @@ test('composer opens with a notice when Buffer is down', async ({ page }) => {
   await signInAs(page, 'free')
   const id = await insertPost({
     owner: 'free',
-    bufferPostId: 'bp_e2e_down',
+    bufferPostId: `bp_e2e_down_${Date.now()}`,
     bufferStatus: 'scheduled',
   })
   const response = await page.goto(`/app/posts/${id}`)
