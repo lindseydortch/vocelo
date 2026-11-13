@@ -1,7 +1,9 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, like } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
-import { bufferConnections, users } from '~/db/schema'
+import { bufferConnections, usageEvents, users } from '~/db/schema'
+import { getEffectivePlan } from '~/server/plan'
+import { PRESETS } from '~/test/presets'
 import { createTestSql } from '~/test/db'
 
 const jar = vi.hoisted(() => ({ values: new Map<string, string>() }))
@@ -43,6 +45,7 @@ afterEach(async () => {
   jar.values.clear()
   await testDb.delete(users).where(eq(users.bufferAccountId, 'e2e_free'))
   await testDb.delete(users).where(eq(users.bufferAccountId, 'e2e_creator'))
+  await testDb.delete(users).where(like(users.bufferAccountId, 'e2e\\_%'))
 })
 afterAll(async () => {
   await sql.end()
@@ -126,6 +129,49 @@ describe('handleTestLogin', () => {
       .from(users)
       .where(eq(users.bufferAccountId, 'e2e_free'))
     expect(user?.plan).toBe('free')
+  })
+
+  it.each([
+    'free-at-limit',
+    'free-low-chars',
+    'free-downgraded',
+    'creator-canceling',
+    'creator-past-due',
+  ] as const)('signs in the %s preset with its seeded state', async (key) => {
+    enable()
+    const res = await handleTestLogin(req(key))
+    expect(res.status).toBe(302)
+    const [user] = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.bufferAccountId, `e2e_${key}`))
+    expect(unsealSession(jar.values.get(SESSION_COOKIE)!)).toBe(user?.id)
+    expect(getEffectivePlan(user!)).toBe(PRESETS[key].expected.plan)
+    const events = await testDb
+      .select()
+      .from(usageEvents)
+      .where(eq(usageEvents.userId, user!.id))
+    expect(events.length).toBeGreaterThan(0)
+  })
+
+  it('rebuilds a preset user on every sign-in instead of stacking data', async () => {
+    enable()
+    await handleTestLogin(req('free-at-limit'))
+    await handleTestLogin(req('free-at-limit'))
+    const [user] = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.bufferAccountId, 'e2e_free-at-limit'))
+    const reviews = await testDb
+      .select()
+      .from(usageEvents)
+      .where(
+        and(
+          eq(usageEvents.userId, user!.id),
+          eq(usageEvents.kind, 'post_review'),
+        ),
+      )
+    expect(reviews).toHaveLength(5)
   })
 
   it('404s when E2E_AUTH is unset', async () => {

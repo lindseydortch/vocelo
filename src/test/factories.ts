@@ -6,6 +6,7 @@ import postgres from 'postgres'
 import { now } from '~/lib/clock'
 import { registerCleanup } from './cleanup'
 import { testDatabaseUrl } from './db'
+import { populatePreset, presetUserValues, type PresetKey } from './presets'
 
 export type TestPlan = 'free' | 'creator'
 export type TestSubscriptionStatus =
@@ -29,6 +30,12 @@ function testDb() {
 }
 
 export type CreateTestUserInput = {
+  /**
+   * Builds a full billing scenario (plan, period, usage events, custom personas,
+   * backdated posts) relative to the project clock. Cannot be combined with
+   * `plan`, `subscriptionStatus`, or `periodAnchorAt`.
+   */
+  preset?: PresetKey
   plan?: TestPlan
   /** Creator only. Defaults to `active`. Ignored (must be unset) for Free. */
   subscriptionStatus?: TestSubscriptionStatus
@@ -43,6 +50,7 @@ export type CreateTestUserInput = {
 export async function createTestUser(
   input: CreateTestUserInput = {},
 ): Promise<TestUser> {
+  if (input.preset) return createPresetUser(input)
   const plan = input.plan ?? 'free'
   if (plan === 'free' && input.subscriptionStatus) {
     throw new Error(
@@ -75,6 +83,34 @@ export async function createTestUser(
   const row = rows[0]
   if (!row) throw new Error('createTestUser: insert returned no row')
   createdUserIds.add(row.id)
+  return row
+}
+
+async function createPresetUser(input: CreateTestUserInput): Promise<TestUser> {
+  const { preset } = input
+  if (!preset) throw new Error('createTestUser: preset is required')
+  if (input.plan || input.subscriptionStatus || input.periodAnchorAt) {
+    throw new Error(
+      'createTestUser: preset cannot be combined with plan, subscriptionStatus, or periodAnchorAt',
+    )
+  }
+  const suffix = randomUUID()
+  const at = now()
+  const db = testDb()
+  const [row] = await db
+    .insert(users)
+    .values(
+      presetUserValues(preset, at, {
+        bufferAccountId: `buffer_acct_${suffix}`,
+        bufferOrganizationId: `buffer_org_${suffix}`,
+        email: `user-${suffix}@example.test`,
+        suffix,
+      }),
+    )
+    .returning()
+  if (!row) throw new Error('createTestUser: insert returned no row')
+  createdUserIds.add(row.id)
+  await populatePreset(db, row, preset, at)
   return row
 }
 

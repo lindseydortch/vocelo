@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { count, eq, like } from 'drizzle-orm'
+import { and, count, eq, like } from 'drizzle-orm'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
-import { posts, users, versions } from '~/db/schema'
+import { personas, posts, usageEvents, users, versions } from '~/db/schema'
+import { getEffectivePlan } from '~/server/plan'
+import { PRESET_KEYS, PRESETS } from '~/test/presets'
 import { resetClock, setClock } from '~/lib/clock'
 import { textHash } from '~/lib/text'
 import { reactionSchema, toneReadSchema } from '~/server/llm'
@@ -103,19 +105,50 @@ describe('seed script', () => {
       .select()
       .from(users)
       .where(like(users.bufferAccountId, SEED_LIKE))
-    expect(rows).toHaveLength(2)
+    expect(rows).toHaveLength(7)
   })
 })
 
 describe('runSeed', () => {
+  it('creates all 7 billing presets, tagged and with preset state', async () => {
+    await runSeed(db, NOW)
+    for (const key of PRESET_KEYS) {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.bufferAccountId, `seed_${key}`))
+      expect(user, key).toBeDefined()
+      expect(getEffectivePlan(user!)).toBe(PRESETS[key].expected.plan)
+      const personaRows = await db
+        .select()
+        .from(personas)
+        .where(eq(personas.userId, user!.id))
+      expect(personaRows, key).toHaveLength(PRESETS[key].customPersonas)
+      const reviews = await db
+        .select()
+        .from(usageEvents)
+        .where(
+          and(
+            eq(usageEvents.userId, user!.id),
+            eq(usageEvents.kind, 'post_review'),
+          ),
+        )
+      expect(reviews, key).toHaveLength(PRESETS[key].usage.reviewedPosts)
+      if (user!.stripeCustomerId) {
+        expect(user!.stripeCustomerId).toMatch(/^cus_seed_/)
+        expect(user!.stripeSubscriptionId).toMatch(/^sub_seed_/)
+      }
+    }
+  })
+
   it('creates a Free and an active Creator user with period dates', async () => {
     await runSeed(db)
     const rows = await db
       .select()
       .from(users)
       .where(like(users.bufferAccountId, SEED_LIKE))
-    const free = rows.find((r) => r.plan === 'free')
-    const creator = rows.find((r) => r.plan === 'creator')
+    const free = rows.find((r) => r.bufferAccountId === 'seed_free')
+    const creator = rows.find((r) => r.bufferAccountId === 'seed_creator')
     expect(free?.subscriptionStatus).toBeNull()
     expect(creator?.subscriptionStatus).toBe('active')
     expect(creator?.currentPeriodStart).toBeInstanceOf(Date)
@@ -146,7 +179,7 @@ describe('runSeed', () => {
       .select({ n: count() })
       .from(users)
       .where(eq(users.bufferAccountId, 'real_user'))
-    expect(seeded[0]?.n).toBe(2)
+    expect(seeded[0]?.n).toBe(7)
     expect(real[0]?.n).toBe(1)
   })
 })
@@ -235,7 +268,7 @@ describe('seed posts (#41)', () => {
       .from(posts)
       .innerJoin(users, eq(posts.userId, users.id))
       .where(like(users.bufferAccountId, SEED_LIKE))
-    expect(row?.n).toBe(SEED_POSTS.length * 2)
+    expect(row?.n).toBe(SEED_POSTS.length * 7)
   })
 })
 
