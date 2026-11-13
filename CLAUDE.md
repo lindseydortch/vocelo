@@ -56,7 +56,9 @@ End every commit message and PR description with its own body text. Leave out al
   `gh pr merge <PR#> --auto --squash`. All ticket PRs into `dev` auto-merge once CI passes; the human does
   not merge them by hand. Never merge any other way. Never run `git merge`.
 - The only manual merge is the final `dev` → `main` release PR, done by the human.
-- Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
+- Never run cleanup yourself. It is automatic: `scripts/ticket-sweep.sh` runs from `ticket-start.sh` and
+  `ticket-next.sh` and removes every ticket whose PR merged into `dev` (local worktree and branch, remote branch).
+  The human can also run `./scripts/ticket-sweep.sh` or `./scripts/ticket-cleanup.sh <issue>` any time.
 
 ## Assumptions log
 When you make an assumption, deviate from a ticket's wording, or pick a default the docs didn't specify,

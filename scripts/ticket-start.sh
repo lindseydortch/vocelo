@@ -11,6 +11,9 @@ BRANCH="$TYPE/$ISSUE-$SLUG"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PORT=$((3000 + ISSUE % 1000))
 
+# Clean up any tickets whose PRs already merged (best-effort)
+"$REPO_ROOT/scripts/ticket-sweep.sh" || true
+
 # Refuse closed issues, human tickets, and tickets with unresolved blockers. No override.
 "$REPO_ROOT/scripts/ticket-next.sh" --check "$ISSUE"
 
