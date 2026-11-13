@@ -4,6 +4,9 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: 'node',
+    globalSetup: ['./src/test/global-setup.ts'],
+    testTimeout: 20000,
+    hookTimeout: 60000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
