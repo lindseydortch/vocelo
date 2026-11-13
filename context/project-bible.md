@@ -13,7 +13,9 @@
 | Instagram | ⏳ Stretch | "Caption mode": requires an image on every post |
 | TikTok, YouTube Shorts, Pinterest, Google Business, Facebook | ❌ Out of scope | Video/visual-first or not a target audience |
 
-**Stack:** TanStack Start (React) · SCSS/Sass modules (`*.module.scss`) · Buffer GraphQL API · ElevenLabs (text-to-speech only) · LLM for reactions/tone · Stripe · Buffer OAuth for login (verified) · Neon (Postgres database) · Cloudflare R2 (image storage, **stretch**)
+**Stack:** TanStack Start (React) · SCSS/Sass modules (`*.module.scss`) · Buffer GraphQL API · ElevenLabs (text-to-speech only) · Anthropic `claude-haiku-5-5` for reactions/Tone read · Stripe · Buffer OAuth for login (verified) · Neon (Postgres) via Drizzle ORM · **Netlify** hosting · Netlify Blobs (audio cache) · Cloudflare R2 (image storage, **stretch**)
+
+**Vocabulary:** `GLOSSARY.md` (repo root) defines Post, Buffer draft, Persona, Voice avatar, Reviewed post, Usage period, Locked, etc. Use those words in code and tickets.
 
 ---
 
@@ -38,7 +40,7 @@ Output of grilling Step 0. Sections below are already updated to match.
 - **One Vocelo post = one channel = one Buffer draft.**
 - **Vocelo overwrites the Buffer draft's text on save** (last write wins). Importing a Buffer draft copies it into Vocelo once.
 - **Images added in Buffer are preserved:** before `editPost`, read the draft's current assets and send them back unchanged. Drafts with images show "📎 N images, edit them in Buffer."
-- **"Reviewed post"** = a post counts once, on its **first TTS read** within the user's usage period.
+- **"Reviewed post"** = a post counts once per usage period, the **first time it triggers anything that costs money** (new TTS audio, incl. highlight-to-hear; a reaction; a Tone read). Cached replays, imports, and the sample post never count. *(Updated in Step 1.)*
 - **Usage period** (all counters reset together):
   - Free: monthly on the signup anniversary day (signup on the 31st → resets on the last day of shorter months)
   - Paid: the Stripe billing period
@@ -53,7 +55,7 @@ Output of grilling Step 0. Sections below are already updated to match.
 ### Before build day (human tasks, not agent tickets)
 1. ~~Register a Buffer app client → confirm OAuth works~~ ✅ Done 2026-11-12 (consent + redirect verified)
 2. Point Namecheap nameservers to Cloudflare (24–48 h propagation)
-3. Decide hosting + LLM provider (grilling Step 1), then create the hosting project
+3. ~~Decide hosting + LLM provider~~ ✅ Netlify + Anthropic Haiku 5.5 (Step 1). Create the Netlify site + Anthropic API key
 4. Create Stripe Creator product/price (test mode)
 5. Buy ElevenLabs Starter ($6); pick 3 stock voice IDs for standard personas
 6. Publish `/privacy` + `/terms` at real URLs (Buffer app client + Stripe need them)
@@ -96,11 +98,84 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 | 7 | Design Pass | Full flow working | — |
 
 ### Open questions handed to later grilling sessions
-- **Step 1 (data model):** where cached TTS audio is stored; LLM output JSON schema for reactions + Tone read; Free "last 3 versions": hidden or deleted beyond 3 (incl. after downgrade)
+- ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
 - **Step 3 (sign-in):** DB lock for single-use refresh tokens; users with multiple Buffer organizations
 - **Step 5 (billing):** Stripe webhook idempotency; success page loading before the webhook lands; atomic check-then-consume on usage counters
 - **Step 9 (scheduling):** timezone for `dueAt`
 - **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
+
+---
+
+## Step 1 Decisions: Open decisions + data model (agreed 2026-11-12)
+
+### Open decisions closed
+| Decision | Result |
+|---|---|
+| Hosting | **Netlify.** 60 s sync function limit (not configurable), streaming responses up to 20 MB, Netlify Blobs emulated in local dev by the TanStack Start Vite plugin. |
+| LLM | **Anthropic `claude-haiku-5-5`** with schema-enforced JSON output. One server-only `llm.ts` module. |
+| Design direction | Still open; decided in the Design Pass. |
+
+### LLM output shapes
+- **Reaction:** `{ reaction: string (≤ 2 sentences, ≤ 280 chars), sentiment: "positive" | "neutral" | "negative" }`
+- **Tone read:** `{ label: string, sentiment: "positive" | "neutral" | "negative", summary: string (1 sentence) }`
+- `sentiment` maps to `$tone-positive` / `$tone-neutral` / `$tone-negative`.
+- Parse failure → retry once → "Couldn't get a reaction, try again." Failed calls consume nothing.
+- Cached by (persona, text hash) for reactions and by text hash for Tone read; unchanged text is free. After an edit the panel shows "Text changed: refresh."
+- Safety cap on every plan: **60 LLM calls / hour / user** (counted via `usage_events.kind = llm_call`).
+
+### Usage rules
+- **Two meters, posts first.** Free: **5 reviewed posts** + 8,000 voice characters. Creator: unlimited posts (fair use) + 80,000 characters. Whichever runs out first blocks new audio.
+- **Only new audio uses voice characters.** Audio cache key = `sha256(model | voiceId | text)`, shared across users.
+- **Reviewed post** = the first thing that costs money (new TTS incl. highlight-to-hear, a reaction, or a Tone read). Imports, cached replays, and the sample post never count.
+- **Too big for what's left** (e.g. 800 chars needed, 500 left) → blocked, no partial read: "800 characters needed, 500 left. Highlight a shorter section or upgrade." Cached audio for posts already reviewed this period still plays.
+- **Check-then-consume:** one transaction locks the user row, sums this period's `usage_events`, and inserts the new event **before** calling ElevenLabs / the LLM. On provider failure, delete the event (refund).
+- **Usage period:** Free = monthly from `users.period_anchor_at` (signup; reset when a subscription ends); paid = Stripe `current_period_start/end`.
+- **Effective plan** = Creator while `subscription_status` is `active`, `trialing`, or `past_due` (grace while Stripe retries). Otherwise Free.
+- **Deleting a post never refunds usage:** its `usage_events` keep their rows with `post_id = NULL`.
+
+### History, versions, personas
+- History window measured from **`last_edited_at`**. Versions, reactions, and Tone reads follow their post's visibility.
+- **Free "last 3 versions" = hide, never delete.** Upgrading reveals the rest; downgrade needs no migration.
+- **A version is created only when "Save draft" succeeds in Buffer**, and only if the text changed. Restore loads text into the editor as unsaved; saving creates a new version (history is never rewritten).
+- **Personas:** one table. Standard personas have `user_id = NULL` and are inserted by a **migration** (so production has them). Custom personas (Creator: 5) pick a voice from a hard-coded list of ~8 stock ElevenLabs voices; the user writes a "who is this reader" description that our template turns into the reaction prompt.
+- **Downgrade:** custom personas become locked (hidden, not deleted); their past reactions stay visible.
+- **Deleting a custom persona** = soft delete (`deleted_at`), so old reactions keep its name.
+- **Free "1 persona per post":** the first persona you request a reaction from is stored in `posts.reaction_persona_id` and locked in for that post.
+
+### Post ↔ Buffer edge cases
+- **Channel locks after the first save to Buffer.** ("Duplicate to another channel" is stretch.)
+- **Draft deleted in Buffer** → on save, clear `buffer_post_id`, create a new draft, show "Recreated in Buffer."
+- **Draft already scheduled or sent in Buffer** → block the overwrite, offer "Save as a new draft."
+- **Channel disconnected in Buffer** → post readable, saving disabled: "Channel no longer connected."
+- **Import:** free, never counts as a review; unique (`user_id`, `buffer_post_id`) so each draft imports once (already-imported drafts hidden from the import list); unsupported-channel drafts hidden; over-limit text imports but "Save draft" stays blocked until it fits.
+- **Deleting a post in Vocelo** deletes only Vocelo's copy (post, versions, reactions, Tone reads). The Buffer draft stays; the confirm dialog says so.
+
+### Sample post
+- Created per user on first sign-in, `is_sample = true`. Never counts toward limits, never locks, read-only (can't edit or save to Buffer), deletable. Audio, reactions, and Tone read are pre-made static files in `/public/demo/` for the 3 standard personas. "Start your own post" button beside it. (Built in the Pages step.)
+
+### Accounts and data
+- No self-serve account deletion in MVP (stretch). Disconnect deletes `buffer_connections` only; posts stay. Privacy policy: "Email support@<domain> to delete your data."
+
+### Storage and tooling
+- **Drizzle ORM** + Neon serverless driver; `drizzle-kit` migrations committed to the repo; UUID primary keys (post URLs are unguessable).
+- **Cached audio:** Netlify Blobs, format `mp3_44100_64` (~8 KB per second of speech), served through a server function (private). Demo + sample audio are static files in `/public/demo/`.
+- **No tables for** audio (Blobs), sessions (encrypted cookie), or OAuth state (short-lived cookie). Images are stretch.
+
+### Schema
+| Table | Key columns |
+|---|---|
+| `users` | `id`, `buffer_account_id` (unique), `email?`, `buffer_organization_id`, `plan`, `stripe_customer_id?`, `stripe_subscription_id?`, `subscription_status?`, `current_period_start/end?`, `cancel_at_period_end`, `period_anchor_at`, `created_at` |
+| `buffer_connections` | `user_id` (1:1), `access_token_enc`, `refresh_token_enc`, `access_expires_at`, `scopes`, `updated_at`. Deleted on Disconnect. |
+| `posts` | `id`, `user_id`, `channel_id`, `channel_service`, `channel_name`, `buffer_post_id?`, `buffer_status?` (draft / scheduled / sent), `due_at?`, `text`, `reaction_persona_id?`, `is_sample`, `created_at`, `last_edited_at`. Unique (`user_id`, `buffer_post_id`). |
+| `versions` | `id`, `post_id`, `text`, `text_hash`, `created_at` |
+| `personas` | `id`, `user_id?` (null = standard), `name`, `bio`, `avatar_key`, `elevenlabs_voice_id`, `reader_description`, `reaction_prompt`, `created_at`, `deleted_at?` |
+| `reactions` | `id`, `post_id`, `persona_id`, `text_hash`, `reaction`, `sentiment`, `model`, `created_at`. Unique (`post_id`, `persona_id`, `text_hash`). |
+| `tone_reads` | `id`, `post_id`, `text_hash`, `label`, `sentiment`, `summary`, `model`, `created_at`. Unique (`post_id`, `text_hash`). |
+| `usage_events` | `id`, `user_id`, `kind` (`tts_chars` / `post_review` / `llm_call`), `amount`, `post_id?` (set null on delete), `created_at` |
+| `stripe_events` | `id` (Stripe `evt_…`), `type`, `processed_at` |
+
+### Ticket budget impact
+Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the single "DB schema + usage/plan module STUB" box on the critical path, so the MVP is now roughly **10 tickets over** the ~20 budget. Revisit the cut order after Step 2.
 
 ---
 
@@ -211,11 +286,11 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 - [ ] Plan stored on user record (default: Free)
 - [ ] Server-side plan + usage enforcement before every TTS / reaction call
 - [ ] **History window by plan** (Free: 30 days, Creator: 12 months, Team: unlimited)
-  - Enforced server-side in every query that lists posts, versions, or reactions (filter by `created_at` against the user's plan)
+  - Enforced server-side in every query that lists posts, versions, or reactions (filter by **`last_edited_at`** against the user's plan; the sample post is exempt)
   - Locked teaser card: "🔒 N posts older than 30 days. Upgrade to see them" → Stripe Checkout
   - UI note that Buffer drafts are unaffected and always remain in Buffer
   - Locked data is hidden, not deleted (upgrading unlocks it instantly)
-- [ ] Posts-reviewed limit (Free: 10 per usage period); a post counts on its **first TTS read**
+- [ ] Posts-reviewed limit (**Free: 5** per usage period); a post counts the first time it triggers anything that costs money (see Step 1 Decisions)
 - [ ] Usage tracking + counters ("6,200 of 8,000 voice characters left"), reset per **usage period** (Free: signup anniversary; paid: Stripe billing period; see Kickoff Decisions)
 - [ ] Locked-feature UI + upgrade prompts
 - [ ] Stripe test mode for demo (card `4242 4242 4242 4242`)

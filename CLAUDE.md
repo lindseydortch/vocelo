@@ -9,8 +9,6 @@
 Don't duplicate these docs. If they conflict, **ask the human**; don't pick one silently.
 
 ## Open decisions (delete each line once decided and recorded in `context/project-bible.md`)
-- LLM provider (persona reactions + Tone read)
-- Hosting provider
 - Design direction (decided last, in the Design Pass)
 
 ## Tickets (GitHub Issues)
