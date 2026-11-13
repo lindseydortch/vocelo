@@ -52,9 +52,14 @@ const RESULT_FIELDS = `__typename
   ... on MutationError { message }`
 
 function unwrap(payload: MutationPayload | undefined): BufferWriteResult {
-  if (payload?.post) {
-    return { id: payload.post.id, status: mapStatus(payload.post.status) }
-  }
+  const post = unwrapPost(payload)
+  return { id: post.id, status: mapStatus(post.status) }
+}
+
+function unwrapPost(
+  payload: MutationPayload | undefined,
+): NonNullable<MutationPayload['post']> {
+  if (payload?.post) return payload.post
   if (typeof payload?.message === 'string') {
     throw new BufferMutationError(
       payload.message,
@@ -140,8 +145,7 @@ async function editPost(
   if (payload?.__typename === 'LimitReachedError') {
     throw new BufferQueueFullError(payload.message ?? 'Queue limit reached')
   }
-  unwrap(payload)
-  return payload!.post!
+  return unwrapPost(payload)
 }
 
 /**
