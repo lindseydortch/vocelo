@@ -1,9 +1,14 @@
 export const composerCopy = {
   title: 'Composer',
   slots: {
-    top: 'Banners and usage meter will live here.',
-    left: 'Channel, editor, counter, save, and hint will live here.',
-    right: 'Persona panel will live here.',
+    banners: 'Banners will live here.',
+    meter: 'Usage meter will live here.',
+    channel: 'Channel picker will live here.',
+    editor: 'Editor will live here.',
+    counter: 'Character counter will live here.',
+    save: 'Save button will live here.',
+    hint: 'Hint will live here.',
+    persona: 'Persona panel will live here.',
   },
   readOnly: 'This sample post is read-only.',
   lockedRedirect: 'This post is locked on your plan',

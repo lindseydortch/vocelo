@@ -11,13 +11,22 @@ function ComposerPage() {
   return (
     <main className={styles.page} data-read-only={readOnly}>
       <h1>{copy.title}</h1>
-      <div data-slot="composer-top">{copy.slots.top}</div>
+      <div data-slot="composer-top">
+        <div data-slot="banners">{copy.slots.banners}</div>
+        <div data-slot="meter">{copy.slots.meter}</div>
+      </div>
       {readOnly && <p role="status">{copy.readOnly}</p>}
       <div className={styles.layout}>
         <section data-slot="composer-left" aria-label={post.channelName}>
-          {copy.slots.left}
+          {(['channel', 'editor', 'counter', 'save', 'hint'] as const).map(
+            (slot) => (
+              <div key={slot} data-slot={slot}>
+                {copy.slots[slot]}
+              </div>
+            ),
+          )}
         </section>
-        <aside data-slot="composer-right">{copy.slots.right}</aside>
+        <aside data-slot="composer-right">{copy.slots.persona}</aside>
       </div>
     </main>
   )

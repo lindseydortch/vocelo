@@ -11,6 +11,17 @@ test('own post opens with the three composer slots', async ({ page }) => {
   for (const slot of ['composer-top', 'composer-left', 'composer-right']) {
     await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible()
   }
+  for (const slot of [
+    'banners',
+    'meter',
+    'channel',
+    'editor',
+    'counter',
+    'save',
+    'hint',
+  ]) {
+    await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible()
+  }
   const [left, right] = await Promise.all([
     page.locator('[data-slot="composer-left"]').boundingBox(),
     page.locator('[data-slot="composer-right"]').boundingBox(),
