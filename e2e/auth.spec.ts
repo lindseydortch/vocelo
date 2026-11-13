@@ -16,7 +16,7 @@ test('signed-out visit to /app lands on /signin with returnTo', async ({
 test('signed-in user reaches /app and is bounced off /signin', async ({
   page,
 }) => {
-  await signInAs(page, 'free')
+  await signInAs(page, 'free', { dbOff: true })
   await page.goto('/app')
   await expect(page).toHaveURL(/\/app$/)
   await expect(
