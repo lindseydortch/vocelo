@@ -102,3 +102,23 @@ describe('generated migration', () => {
     expect(migrationSql.match(/CREATE TABLE/g)).toHaveLength(9)
   })
 })
+
+describe('sign-in schema additions (#58)', () => {
+  const col = (t: Parameters<typeof getTableConfig>[0], n: string) =>
+    cfg(t).columns.find((c) => c.name === n)
+
+  it('has a nullable text users.timezone', () => {
+    expect(col(schema.users, 'timezone')?.getSQLType()).toBe('text')
+    expect(col(schema.users, 'timezone')?.notNull).toBe(false)
+  })
+
+  it('has a text posts.bufferOrganizationId', () => {
+    expect(col(schema.posts, 'bufferOrganizationId')?.getSQLType()).toBe('text')
+  })
+
+  it('ships both columns in the migrations, with no drops or renames', () => {
+    expect(migrationSql).toContain('"timezone" text')
+    expect(migrationSql).toMatch(/"buffer_organization_id" text/)
+    expect(migrationSql).not.toMatch(/DROP COLUMN|RENAME/i)
+  })
+})
