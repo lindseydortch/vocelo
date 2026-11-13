@@ -93,7 +93,12 @@ describe('ticket-next.sh MVP/stretch grouping', () => {
   it('shows an MVP ticket blocked by a stretch ticket as blocked, not ready', () => {
     const r = run(
       [
-        { number: 20, title: 'feat: needs stretch', labels: ['MVP'], body: '**Blocked by:** #21' },
+        {
+          number: 20,
+          title: 'feat: needs stretch',
+          labels: ['MVP'],
+          body: '**Blocked by:** #21',
+        },
         { number: 21, title: 'feat: stretch dep', labels: ['stretch'] },
       ],
       [],
