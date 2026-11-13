@@ -10,15 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SigninRouteImport } from './routes/signin'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
+import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AuthBufferStartRouteImport } from './routes/auth/buffer/start'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -31,6 +39,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -41,6 +54,11 @@ const Char91__testChar93LoginRoute = Char91__testChar93LoginRouteImport.update({
   path: '/__test/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AuthBufferStartRoute = AuthBufferStartRouteImport.update({
   id: '/auth/buffer/start',
   path: '/auth/buffer/start',
@@ -49,60 +67,78 @@ const AuthBufferStartRoute = AuthBufferStartRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/app/': typeof AppIndexRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/app': typeof AppIndexRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/app/': typeof AppIndexRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app'
     | '/pricing'
     | '/privacy'
+    | '/signin'
     | '/terms'
     | '/__test/login'
+    | '/app/'
     | '/auth/buffer/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/pricing'
     | '/privacy'
+    | '/signin'
     | '/terms'
     | '/__test/login'
+    | '/app'
     | '/auth/buffer/start'
   id:
     | '__root__'
     | '/'
+    | '/app'
     | '/pricing'
     | '/privacy'
+    | '/signin'
     | '/terms'
     | '/__test/login'
+    | '/app/'
     | '/auth/buffer/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRouteRoute: typeof AppRouteRouteWithChildren
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  SigninRoute: typeof SigninRoute
   TermsRoute: typeof TermsRoute
   Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
   AuthBufferStartRoute: typeof AuthBufferStartRoute
@@ -115,6 +151,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -131,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -145,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91__testChar93LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/auth/buffer/start': {
       id: '/auth/buffer/start'
       path: '/auth/buffer/start'
@@ -155,10 +212,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppRouteRouteChildren {
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  SigninRoute: SigninRoute,
   TermsRoute: TermsRoute,
   Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
   AuthBufferStartRoute: AuthBufferStartRoute,
