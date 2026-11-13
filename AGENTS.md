@@ -23,3 +23,6 @@ Title `<type>: <description>` · labels (`MVP`/`stretch` + area, plus `human` if
 ## Non-negotiables when building- One issue = one branch = one folder = one port = one agent. Follow `context/GIT_WORKFLOW.md` exactly.
 - No visual design until the Design Pass. `rem` only (1rem = 10px). Desktop-first. Details in `context/project-bible.md`.
 - Secrets and plan enforcement stay server-side.
+
+## Code review
+Use `dev` as the default comparison point for code reviews (`git diff dev...HEAD`), unless the user explicitly requests another reference.

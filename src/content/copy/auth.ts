@@ -31,5 +31,17 @@ export const authCopy = {
     heading: 'Settings',
     placeholder: 'Your settings will live here.',
     signOut: 'Sign out',
+    disconnect: 'Disconnect Buffer',
+    disconnectTitle: 'Disconnect Buffer?',
+    disconnectBody:
+      'This signs you out. Your posts and personas stay in Vocelo, ready when you sign in again.',
+    disconnectBilling:
+      'Your Creator plan keeps billing. Cancel it in Billing first if you want to stop.',
+    disconnectRevoke:
+      'To fully remove access, also remove Vocelo in Buffer → Settings → Connected apps.',
+    disconnectPending: 'Disconnecting…',
+    disconnectError: "Couldn't disconnect Buffer. Try again.",
+    disconnectInfoError: "Couldn't load your connection. Try again.",
+    cancel: 'Cancel',
   },
 } as const
