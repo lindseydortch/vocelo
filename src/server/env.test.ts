@@ -5,7 +5,7 @@ const valid = {
   APP_URL: 'https://localhost:3000',
   DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
   SESSION_SECRET: 'session-secret',
-  TOKEN_ENCRYPTION_KEY: 'token-key',
+  TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   BUFFER_CLIENT_ID: 'buffer-id',
   BUFFER_CLIENT_SECRET: 'buffer-secret',
   STRIPE_SECRET_KEY: 'sk_test_x',
@@ -26,6 +26,16 @@ function messageOf(source: Record<string, string | undefined>) {
 }
 
 describe('parseEnv', () => {
+  it.each([
+    ['not 32 bytes', Buffer.alloc(16, 1).toString('base64')],
+    ['too long', Buffer.alloc(33, 1).toString('base64')],
+    ['not base64', 'token-key'],
+  ])('rejects a TOKEN_ENCRYPTION_KEY that is %s', (_label, key) => {
+    const msg = messageOf({ ...valid, TOKEN_ENCRYPTION_KEY: key })
+    expect(msg).toContain('TOKEN_ENCRYPTION_KEY')
+    expect(msg).toContain('32 bytes')
+  })
+
   it('returns typed values for a valid env', () => {
     const env = parseEnv(valid)
     expect(env.APP_URL).toBe('https://localhost:3000')

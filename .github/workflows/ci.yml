@@ -82,7 +82,7 @@ jobs:
       APP_URL: https://localhost:3000
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
       SESSION_SECRET: ci-session-secret-not-a-secret
-      TOKEN_ENCRYPTION_KEY: ci-token-key-not-a-secret
+      TOKEN_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
       BUFFER_CLIENT_ID: ci-buffer-client-id
       BUFFER_CLIENT_SECRET: ci-buffer-client-secret
       STRIPE_SECRET_KEY: sk_test_ci
