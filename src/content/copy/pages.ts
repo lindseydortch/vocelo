@@ -52,6 +52,16 @@ export const pagesCopy = {
     body: 'An unexpected error occurred.',
     reference: 'Reference:',
   },
+  appShell: {
+    brand: 'Vocelo',
+    navLabel: 'Main',
+    nav: { posts: 'Posts', personas: 'Personas', settings: 'Settings' },
+  },
+  personas: {
+    title: 'Personas',
+    heading: 'Personas',
+    placeholder: 'Personas will live here.',
+  },
   backToApp: 'Back to your app',
   backToHome: 'Back to home',
   footer: {
