@@ -18,6 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "db:generate": "node --env-file-if-exists=.env.local ./node_modules/.bin/drizzle-kit generate",
+    "seed": "node --env-file-if-exists=.env.local scripts/seed/index.ts",
     "db:migrate": "node --env-file-if-exists=.env.local ./node_modules/.bin/drizzle-kit migrate"
   },
   "dependencies": {
