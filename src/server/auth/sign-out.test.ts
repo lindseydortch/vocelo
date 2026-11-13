@@ -26,9 +26,8 @@ vi.mock('~/db/client', () => ({
   },
 }))
 
-const { SESSION_COOKIE, hasValidSessionCookie, sealSession } =
+const { SESSION_COOKIE, clearSession, hasValidSessionCookie, sealSession } =
   await import('./session')
-const { clearSession } = await import('./session')
 
 afterEach(async () => {
   jar.values.clear()
