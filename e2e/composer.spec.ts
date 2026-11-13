@@ -12,7 +12,6 @@ test('own post opens with the three composer slots', async ({ page }) => {
     await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible()
   }
   for (const slot of [
-    'banners',
     'meter',
     'channel',
     'editor',
@@ -22,6 +21,8 @@ test('own post opens with the three composer slots', async ({ page }) => {
   ]) {
     await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible()
   }
+  // Empty until a banner has something to say, so it is attached but not visible.
+  await expect(page.locator('[data-slot="banners"]')).toBeAttached()
   const [left, right] = await Promise.all([
     page.locator('[data-slot="composer-left"]').boundingBox(),
     page.locator('[data-slot="composer-right"]').boundingBox(),
@@ -62,9 +63,11 @@ test('composer opens with a notice when Buffer is down', async ({ page }) => {
   const response = await page.goto(`/app/posts/${id}`)
   expect(response?.status()).toBe(200)
   await expect(page.locator('[data-slot="composer-left"]')).toBeVisible()
-  await expect(page.getByRole('status')).toHaveText(
-    "Couldn't check Buffer just now.",
-  )
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: "Couldn't check Buffer just now." }),
+  ).toHaveCount(1)
 })
 
 test('a post with no Buffer post opens without a notice', async ({ page }) => {
@@ -73,4 +76,37 @@ test('a post with no Buffer post opens without a notice', async ({ page }) => {
   await page.goto(`/app/posts/${id}`)
   await expect(page.locator('[data-slot="composer-left"]')).toBeVisible()
   await expect(page.getByRole('status')).toHaveCount(0)
+})
+
+test.describe('scheduled post', () => {
+  test.use({ timezoneId: 'America/Chicago' })
+
+  test('shows the banner and stays editable', async ({ page }) => {
+    await signInAs(page, 'free')
+    const id = await insertPost({
+      owner: 'free',
+      bufferPostId: 'bp_e2e_scheduled',
+      bufferStatus: 'scheduled',
+      dueAt: new Date('2027-06-02T20:00:00.000Z'),
+    })
+    await page.goto(`/app/posts/${id}`)
+    const banner = page.locator('[data-slot="buffer-status-banner"]')
+    await expect(banner).toContainText(
+      "Scheduled for Wed 3:00 PM America/Chicago. Edits here won't change it.",
+    )
+    await expect(page.locator('[data-slot="editor"]')).toBeVisible()
+  })
+})
+
+test('a draft post has no banner', async ({ page }) => {
+  await signInAs(page, 'free')
+  const id = await insertPost({
+    owner: 'free',
+    bufferPostId: 'bp_e2e_draft',
+    bufferStatus: 'draft',
+  })
+  await page.goto(`/app/posts/${id}`)
+  await expect(page.locator('[data-slot="buffer-status-banner"]')).toHaveCount(
+    0,
+  )
 })

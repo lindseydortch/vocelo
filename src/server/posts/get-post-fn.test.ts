@@ -48,6 +48,7 @@ const { loadPost } = (await import('./get-post-fn')) as unknown as {
     buffer: {
       status: string | null
       dueAt: string | null
+      errorMessage: string | null
       missingInBuffer: boolean
       checkFailed: boolean
     }
@@ -103,8 +104,40 @@ describe('loadPost Buffer sync', () => {
     expect(result.buffer).toEqual({
       status: 'sent',
       dueAt: null,
+      errorMessage: null,
       missingInBuffer: false,
       checkFailed: false,
+    })
+  })
+
+  it("returns Buffer's error message for an errored post", async () => {
+    const post = await setup()
+    server.use(
+      http.post(BUFFER_GRAPHQL_URL, () =>
+        HttpResponse.json({
+          data: {
+            post: {
+              id: 'bp_1',
+              status: 'error',
+              dueAt: null,
+              text: 'x',
+              error: { message: 'Token expired' },
+              assets: [],
+              channel: {
+                id: 'c',
+                isDisconnected: false,
+                isLocked: false,
+                isQueuePaused: false,
+              },
+            },
+          },
+        }),
+      ),
+    )
+    const result = await loadPost({ data: { id: post.id } })
+    expect(result.buffer).toMatchObject({
+      status: 'error',
+      errorMessage: 'Token expired',
     })
   })
 

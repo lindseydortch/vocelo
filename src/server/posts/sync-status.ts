@@ -8,7 +8,12 @@ import { withBuffer } from '~/server/buffer/with-buffer'
 
 export type SyncResult =
   | { status: 'skipped' }
-  | { status: 'synced'; bufferStatus: BufferStatus; dueAt: Date | null }
+  | {
+      status: 'synced'
+      bufferStatus: BufferStatus
+      dueAt: Date | null
+      errorMessage: string | null
+    }
   | { status: 'missingInBuffer' }
   | { status: 'unavailable' }
 
@@ -47,5 +52,10 @@ export async function syncPostStatus(
     .update(posts)
     .set({ bufferStatus: remote.status, dueAt })
     .where(and(eq(posts.id, postId), eq(posts.userId, userId)))
-  return { status: 'synced', bufferStatus: remote.status, dueAt }
+  return {
+    status: 'synced',
+    bufferStatus: remote.status,
+    dueAt,
+    errorMessage: remote.error?.message ?? null,
+  }
 }

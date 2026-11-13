@@ -12,6 +12,15 @@ export const composerCopy = {
   },
   bufferCheckFailed: "Couldn't check Buffer just now.",
   missingInBuffer: 'This post is no longer in Buffer.',
+  bufferStatus: {
+    scheduled: (when: string) =>
+      `Scheduled for ${when}. Edits here won't change it.`,
+    scheduledNoTime: "Scheduled in Buffer. Edits here won't change it.",
+    needsApproval: 'Waiting for approval in Buffer.',
+    sending: 'Posting now.',
+    sent: 'Posted.',
+    errorFallback: "Buffer couldn't post this.",
+  },
   readOnly: 'This sample post is read-only.',
   lockedRedirect: 'This post is locked on your plan',
 } as const
