@@ -19,7 +19,7 @@
 | Personas | 3 standard | Standard + 5 custom | Unlimited custom, shared |
 | Voice characters / usage period (new audio only; cached replays are free) | 12,000 (~15 full reads; raised in Step 7 so 5 posts × 3 voices fit) | 80,000 (~100 full reads) | 200,000 / user (~250 full reads) |
 | Highlight-to-hear | ✓ (counts toward chars) | ✓ | ✓ |
-| Persona reactions | 1 persona per post (the first one you ask is locked in) | All personas | All personas |
+| Persona reactions | All 3 standard personas (changed in Step 8: no per-post lock) | Standard + custom | All personas |
 | Voice-to-text composing* | 5 min/mo | 120 min/mo | 300 min/user/mo |
 | Tone read (whole post) | ✓ | ✓ | ✓ |
 | Tone heat map (per sentence)* | ✗ | ✓ | ✓ |

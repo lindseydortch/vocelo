@@ -8,7 +8,7 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - When an agent ticket needs a human step partway through (paste a key, click through real OAuth), split that step into its own `human` ticket and list it under **Blocked by**. Agents never wait on you mid-ticket.
 - Where each value goes (`.env.local`, Netlify env vars): `context/environments.md`. This file tracks the *work*; that file is the reference.
 
-**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges.
+**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges. H11 runs after Step 8 R3 + R4 merge.
 
 ---
 
@@ -122,3 +122,15 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 **Blocked by:** Step 7 V16, H2.
 **Blocks:** nothing hard (V14 previews and the sample post fall back to "Preview unavailable" / no audio until then); needed before the demo.
 
+
+## H11 · `chore: tune reaction and tone prompts`
+**Labels:** `MVP`, `human`, `analysis`
+**Acceptance criteria**
+- [ ] With `LLM_PROVIDER=anthropic` locally, run 3 posts (incl. at least 1 of your real LinkedIn demo posts) through Get reaction × 3 standard personas + Read the tone
+- [ ] Each persona sounds distinct (Skeptic spots vague claims, Scroller reacts to the first lines, Fan says what works); Tone labels feel right
+- [ ] Edit wording in `src/server/prompts/` on a `chore/<N>-tune-prompts` branch; PR to `dev`; the coordinator merges it
+
+**Blocked by:** Step 8 R3, R4; H3.
+**Blocks:** nothing hard; needed before the demo.
+
+---

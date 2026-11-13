@@ -35,11 +35,11 @@ The image or card that represents a Persona on screen. Only the visual, never th
 _Avoid_: Avatar (on its own), persona card
 
 **Reaction**:
-A Persona's one-to-two-sentence response to a Post's text.
+A Persona's one-to-two-sentence response to a Post's text, as read on that Post's Channel. A Reaction goes **stale** when the text or the Persona changes after it was made; stale Reactions stay visible until refreshed.
 _Avoid_: Feedback, comment, review
 
 **Tone read**:
-A single, persona-independent judgment of how a whole Post comes across.
+A single, persona-independent judgment of how a whole Post comes across on its Channel: one **tone label** from a fixed set plus a one-sentence summary.
 _Avoid_: Tone heat map (that is the per-sentence stretch feature), sentiment
 
 ## Plans and limits

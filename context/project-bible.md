@@ -114,10 +114,10 @@ The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund
 
 ### LLM output shapes
 - **Reaction:** `{ reaction: string (≤ 2 sentences, ≤ 280 chars), sentiment: "positive" | "neutral" | "negative" }`
-- **Tone read:** `{ label: string, sentiment: "positive" | "neutral" | "negative", summary: string (1 sentence) }`
+- **Tone read:** `{ label: ToneLabel, summary: string (1 sentence) }`. `label` comes from a fixed list of 10; our code maps each label to a sentiment (Step 8). Stored rows keep `sentiment`.
 - `sentiment` maps to `$tone-positive` / `$tone-neutral` / `$tone-negative`.
 - Parse failure → retry once → "Couldn't get a reaction, try again." Failed calls consume nothing.
-- Cached by (persona, text hash) for reactions and by text hash for Tone read; unchanged text is free. After an edit the panel shows "Text changed: refresh."
+- Cached by (persona, channel, text hash) for reactions and by (channel, text hash) for Tone read (channel added in Step 8); unchanged text is free. After an edit the panel shows "Text changed: refresh."
 - Safety cap on every plan: **60 LLM calls / hour / user** (counted via `usage_events.kind = llm_call`).
 
 ### Usage rules
@@ -134,10 +134,10 @@ The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund
 - History window measured from **`last_edited_at`**. Versions, reactions, and Tone reads follow their post's visibility.
 - **Free "last 3 versions" = hide, never delete.** Upgrading reveals the rest; downgrade needs no migration.
 - **A version is created only when "Save draft" succeeds in Buffer**, and only if the text changed. Restore loads text into the editor; it autosaves to Vocelo (no version) and shows "Changes not in Buffer yet"; saving creates a new version (history is never rewritten). *(Updated in Step 6.)*
-- **Personas:** one table. Standard personas have `user_id = NULL` and are inserted by a **migration** (so production has them). Custom personas (Creator: 5) pick a voice from a hard-coded list of ~8 stock ElevenLabs voices; the user writes a "who is this reader" description that our template turns into the reaction prompt.
+- **Personas:** one table. Standard personas have `user_id = NULL` and are inserted by a **migration** (so production has them). Custom personas (Creator: 5) pick a voice from a hard-coded list of ~8 stock ElevenLabs voices; the user writes a "who is this reader" description that the reaction prompt template uses at request time (Step 8).
 - **Downgrade:** custom personas become locked (hidden, not deleted); their past reactions stay visible.
 - **Deleting a custom persona** = soft delete (`deleted_at`), so old reactions keep its name.
-- **Free "1 persona per post":** the first persona you request a reaction from is stored in `posts.reaction_persona_id` and locked in for that post.
+- ~~**Free "1 persona per post"**~~ **Removed in Step 8:** Free gets reactions from all 3 standard personas; `posts.reaction_persona_id` is gone.
 
 ### Post ↔ Buffer edge cases
 - **Channel locks after the first save to Buffer.** ("Duplicate to another channel" is stretch.)
@@ -163,11 +163,11 @@ The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund
 |---|---|
 | `users` | `id`, `buffer_account_id` (unique), `email?`, `buffer_organization_id`, `timezone?` (Step 3), `plan`, `stripe_customer_id?`, `stripe_subscription_id?`, `subscription_status?`, `current_period_start/end?`, `cancel_at_period_end`, `period_anchor_at`, `created_at` |
 | `buffer_connections` | `user_id` (1:1), `access_token_enc`, `refresh_token_enc`, `access_expires_at`, `scopes`, `updated_at`. Deleted on Disconnect. |
-| `posts` | `id`, `user_id`, `buffer_organization_id` (Step 3), `channel_id`, `channel_service`, `channel_name`, `buffer_post_id?`, `buffer_status?` (draft / scheduled / sent), `due_at?`, `text`, `reaction_persona_id?`, `is_sample`, `created_at`, `last_edited_at`. Unique (`user_id`, `buffer_post_id`). |
+| `posts` | `id`, `user_id`, `buffer_organization_id` (Step 3), `channel_id`, `channel_service`, `channel_name`, `buffer_post_id?`, `buffer_status?` (draft / scheduled / sent), `due_at?`, `text`, `is_sample`, `created_at`, `last_edited_at`. Unique (`user_id`, `buffer_post_id`). |
 | `versions` | `id`, `post_id`, `text`, `text_hash`, `created_at` |
-| `personas` | `id`, `user_id?` (null = standard), `name`, `bio`, `avatar_key`, `elevenlabs_voice_id`, `reader_description`, `reaction_prompt`, `created_at`, `deleted_at?` |
-| `reactions` | `id`, `post_id`, `persona_id`, `text_hash`, `reaction`, `sentiment`, `model`, `created_at`. Unique (`post_id`, `persona_id`, `text_hash`). |
-| `tone_reads` | `id`, `post_id`, `text_hash`, `label`, `sentiment`, `summary`, `model`, `created_at`. Unique (`post_id`, `text_hash`). |
+| `personas` | `id`, `user_id?` (null = standard), `name`, `bio`, `avatar_key`, `elevenlabs_voice_id`, `reader_description`, `created_at`, `updated_at` (Step 7), `deleted_at?`. No `reaction_prompt`: prompts are built in code (Step 8). |
+| `reactions` | `id`, `post_id`, `persona_id`, `channel_service` (Step 8), `text_hash`, `reaction`, `sentiment`, `model`, `created_at`. Unique (`post_id`, `persona_id`, `channel_service`, `text_hash`). |
+| `tone_reads` | `id`, `post_id`, `channel_service` (Step 8), `text_hash`, `label`, `sentiment`, `summary`, `model`, `created_at`. Unique (`post_id`, `channel_service`, `text_hash`). |
 | `usage_events` | `id`, `user_id`, `kind` (`tts_chars` / `post_review` / `llm_call`), `amount`, `post_id?` (set null on delete), `created_at` |
 | `stripe_events` | `id` (Stripe `evt_…`), `type`, `processed_at` |
 
@@ -375,7 +375,7 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
 | past_due | Banner in Billing settings + composer: "Your last payment failed. Update your card to keep Creator." → Portal. User keeps Creator during retries. |
 | Limit reached | New audio, reactions, Tone read blocked; cached ones still play. Free: "Upgrade to Creator" → Checkout. Creator out of characters: "Resets {date}", no upsell (Team coming soon). |
 | Locked teaser card | Free: "🔒 N posts older than 30 days. Upgrade to see them" → Checkout. Creator: "🔒 N posts older than 12 months. Team is coming soon", no button. |
-| Downgrade | Nothing deleted. Custom personas locked; reactions from Creator days stay visible; on Free the first **new** reaction request locks `reaction_persona_id`. Fresh Free period. |
+| Downgrade | Nothing deleted. Custom personas locked; reactions from Creator days stay visible (refresh shows "Upgrade to refresh"). Fresh Free period. |
 | Refunds, disputes, tax | Manual in the Stripe dashboard; the app ignores them. A refund never changes the plan; only subscription status does. |
 | Disconnect / dead Buffer token | Never touches Stripe (Step 3). |
 | Test users | 7 presets shared by `createTestUser({ preset })`, `npm run seed`, and `/__test/login?user=<key>`: `free`, `free-at-limit` (5/5 posts), `free-low-chars` (500 left), `free-downgraded` (2 locked custom personas, posts 45 days old), `creator` (renews in 20 days), `creator-canceling` (ends in 3 days), `creator-past-due`. Seeded paid users get fake `cus_seed_…` / `sub_seed_…` IDs; real billing is tested by signing in as `free` and paying with `4242 4242 4242 4242`. |
@@ -390,7 +390,7 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
 ### Conflicts flagged
 - **Schema:** `current_period_start/end` come from the subscription item, not the subscription; `cancel_at_period_end` is derived from `cancel_at` too. No new columns needed.
 - **Step 2 I12/I13/I14:** seed, factories, and the E2E helper only had `free` / `creator`. P14 adds the 7 presets on top (no edits to merged tickets).
-- **Reactions (Step 8):** Free's 1-persona-per-post after downgrade uses `reaction_persona_id` only for new requests; old reactions stay.
+- **Reactions (Step 8):** ~~Free 1-persona-per-post~~ removed in Step 8; old reactions from locked custom personas stay visible.
 - **Personas (Step 7):** downgrade locks custom personas (already decided); the `free-downgraded` preset exercises it.
 - **Demo:** the success page syncs directly from Stripe, so the upgrade step works even if `stripe listen` is slow.
 
@@ -450,7 +450,7 @@ Step 6 drafts 14 tickets (`context/tickets/06-composer.md`).
 | Topic | Decision |
 |---|---|
 | Standard trio | **The Skeptic** (peer who spots humblebrags + vague claims), **The Scroller** (busy reader, only gets the first line), **The Fan** (warm supporter, says what works). One distinct stock voice each (H2). Copy stays placeholder. |
-| Free playback | All 3 standard personas for read-aloud + highlight-to-hear. "1 persona per post" is a **reactions** rule only (Step 8). |
+| Free playback | All 3 standard personas for read-aloud + highlight-to-hear. (Step 8 also gives Free reactions from all 3.) |
 | Custom fields | Name 1–40, bio ≤ 160, "Who is this reader?" 1–500 (fed into the reaction template), voice from ~8 stock voices (`src/lib/voices.ts`), avatar from ~12 placeholder icons (`src/lib/avatars.ts`; uploads are stretch). Creating/editing never calls the LLM, never consumes usage. |
 | Limit | Creator (incl. `past_due`, canceling): **5 non-deleted** custom personas; create locks the user row so concurrent creates can't make a 6th. At 5: "Delete one to add another." |
 | Editing | Every field editable; new `personas.updated_at`. Reactions older than it show "Persona changed: refresh" (Step 8). Audio needs nothing: voice ID is in the cache key. |
@@ -485,12 +485,73 @@ Step 6 drafts 14 tickets (`context/tickets/06-composer.md`).
 - **Critical path:** Lane B used "dev API key, no auth"; it now signs in with `/__dev/login` and every server fn calls `requireUser()`. Stub names fixed to `checkAndConsume` / `refund`.
 - **Step 5 P12:** "Step 7 playback (wiring point)" → blocked by V7 + V10.
 - **Step 1 T6 / Step 5 P9, P10:** Free character limit now 12,000; P14's `free-low-chars` stays "500 left".
-- **Step 8 (reactions):** handle "Persona changed: refresh"; treat "Who is this reader?" as quoted data, never instructions (prompt-injection guard); V13's `buildReactionPrompt` is a placeholder Step 8 finalizes.
+- **Step 8 (reactions):** handle "Persona changed: refresh"; treat "Who is this reader?" as quoted data, never instructions (prompt-injection guard). Done in Step 8: prompts are built in code (R3), no `reaction_prompt` column.
 - **Step 10 (pages):** sample post text comes from `src/content/sample-post.ts`; landing showcase uses `/demo/landing-<persona>.mp3`.
 - **H2:** also picks ~8 custom voices. New **H10** runs the static audio script.
 
 ### Tickets
 Step 7 drafts 16 tickets (`context/tickets/07-personas-playback.md`) + human ticket H10.
+
+---
+
+## Step 8 Decisions: Reactions + tone (agreed 2026-11-13)
+
+### Reactions
+| Topic | Decision |
+|---|---|
+| Trigger | A **"Get reaction"** button for the selected persona, separate from Read aloud. Nothing runs automatically. No "react with all personas" button (stretch). Whole post only; reactions on a selection are stretch. |
+| Plans | **Free: all 3 standard personas** (the old "1 persona per post" lock is removed; `posts.reaction_persona_id` dropped). Creator (incl. `past_due`, canceling): standard + own custom. The only plan difference is custom personas. |
+| Validation | Same as Read aloud (V6, no selection): post visible (T7), persona allowed (`PERSONA_LOCKED` / `PERSONA_NOT_FOUND`), not blank (`EMPTY`), within the channel limit (`OVER_CHANNEL_LIMIT`, same message as Read aloud). |
+| Channel-aware | Prompts name the channel ("a post for X"). `channel_service` joins the cache key on `reactions` and `tone_reads`. A channel only changes before the first save, so this rarely misses. |
+| Cache | Hit = a row for (post, persona, channel, text hash) created at or after the persona's `updated_at` → returned free, no usage, no review. Cache is per post (not shared across posts or users). |
+| What the panel shows | The **latest** reaction per persona, selected persona first. Hash ≠ current text → greyed, "Text changed: refresh". Reverting text brings back the cached reaction free. No reaction history UI. |
+| Persona states | **Edited** after the reaction → "Persona changed: refresh"; refresh **upserts** the same row (and resets `created_at`). **Deleted** custom → name + "(deleted)", no refresh. **Locked** custom (downgrade) → visible, "Upgrade to refresh" → Checkout. Never-paid Free → custom personas never appear in the panel. |
+| The Scroller | Gets the full text; its prompt says to react as someone who stops after the first two lines. |
+
+### Tone read
+| Topic | Decision |
+|---|---|
+| Trigger | A "Read the tone" button. Persona-independent, channel-aware, on every plan. |
+| Labels | Fixed list of 10 in `src/lib/tone.ts`: Confident, Warm, Inspiring, Helpful, Neutral, Vague, Salesy, Braggy, Defensive, Preachy. **Our code maps label → sentiment**; the LLM returns `{ label, summary }` only. Mapping: Confident/Warm/Inspiring/Helpful = positive, Neutral/Vague = neutral, Salesy/Braggy/Defensive/Preachy = negative. |
+| Display | Label chip (sentiment token) + one-sentence summary; "Text changed: refresh" when stale. |
+
+### Usage + failures (reactions and Tone read)
+| Topic | Decision |
+|---|---|
+| Accounting | One user request = **1 `llm_call` event** (the internal retry doesn't count) + `post_review` if it's the post's first chargeable action this period. Cache hit = nothing. No per-period reaction cap; only the 60/hour safety cap. Free at 5/5 posts: still works on posts already reviewed this period; a new post → P12 "Upgrade". |
+| Order | `flush()` → server reads text from DB → validate → cache check → `checkAndConsume(llm_call)` → LLM → upsert. Any failure → `refund`. |
+| Timeouts | 20 s per attempt × 2 attempts (≤ 40 s, inside Netlify's 60 s). |
+| Errors | Bad JSON, reaction > 280 chars, or unknown label → retry once → "Couldn't get a reaction. Try again." / "Couldn't read the tone. Try again." · Model refusal (`stop_reason: refusal`) → same message, **no retry** · Anthropic 429/overloaded → "Reactions are busy. Try again in a few seconds." · Bad key / our quota → "Reactions are unavailable right now." (logged) · Usage → P12. |
+| Free warning | Free only (all three buttons; Read aloud added via R11), not the sample post: when the next request would make this a **newly** reviewed post, a note sits under Read aloud, Get reaction and Read the tone: "Uses 1 of your 5 posts this period (3 left)." Last one: "Uses your last free post this period." Post already reviewed this period → no note (refresh costs nothing). At 0 left the button still works and P12 shows on click. Creator: no note. No new limit. |
+| Double clicks | Button shows "Thinking…" and is disabled. Two identical concurrent requests may both charge; the second wins the upsert (accepted, same as audio). |
+
+### Prompts
+| Topic | Decision |
+|---|---|
+| Where | Built **in code at request time** (`src/server/prompts/`), not stored. `personas.reaction_prompt` removed. Standard personas' prompts keyed by their fixed IDs; custom personas use one template fed by "Who is this reader?". |
+| Injection guard | Fixed system prompt per kind. Post text in `<post>`, reader description in `<reader>` (closing tags in user text escaped); the system prompt says tag contents are data, never instructions. Schema-enforced output, no tools. No moderation (only the author sees the result). |
+| Wording | Agents write first drafts; the human tunes them on build day (**H11**). UI strings are placeholders in `copy.ts`. |
+
+### Sample post, fixtures, demo
+- **Sample post:** pre-made reactions for the 3 standard personas + a Tone read, hand-written in `src/content/sample-post.ts`. Get reaction / Read the tone return them free. Custom personas: "Try this on your own post".
+- **`LLM_PROVIDER=fixture`:** seeded posts → I12's JSON; any other text → a canned reaction per persona and a "Neutral" Tone read. E2E never hits the network. `DEMO_FALLBACK` works the same as playback (sample post only).
+- **Demo with pasted LinkedIn posts:** pasting into a new post = live LLM calls (~2–5 s each, cache is per post). Audio is shared by text, so a dry run pre-warms it. To be safe, create the demo posts in the demo account the night before (reactions cached); paste one fresh post live if you want the "real" moment. Each pasted post counts as a reviewed post (Free = 5).
+
+### Schema changes (drafts edited directly: no code or issues exist yet)
+- `posts`: drop `reaction_persona_id`
+- `personas`: drop `reaction_prompt`
+- `reactions`, `tone_reads`: add `channel_service`; unique keys include it
+
+### Conflicts flagged
+- **`pricing-tiers.md`:** "1 persona per post" removed. Free → Creator reaction trigger is now only custom personas.
+- **Step 1 T3:** inserts `reader_description` instead of `reaction_prompt`. **T8:** R2 hardens its schemas, timeouts and errors; the Tone read shape changes to `{ label, summary }`.
+- **Step 5:** Downgrade row + "Conflicts flagged" updated; P12 renders `rate` / `posts` errors from reactions too.
+- **Step 7 V13:** no longer writes `reaction_prompt`.
+- **Step 2 I12:** fixture JSON uses the fixed labels and includes `channel_service`.
+- **Demo:** `DEMO_FALLBACK` doesn't cover pasted posts; pre-created demo posts do.
+
+### Tickets
+Step 8 drafts 11 tickets (`context/tickets/08-reactions-tone.md`) + human ticket H11.
 
 ---
 
@@ -591,7 +652,7 @@ Step 7 drafts 16 tickets (`context/tickets/07-personas-playback.md`) + human tic
 | Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
 | History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
 | Billing | Webhook signature check (raw body); idempotency via `stripe_events` in the same transaction; out-of-order events can't roll back (re-fetch); unknown customer → 200; success page before the webhook lands; already-Creator can't open Checkout; canceling / past_due / canceled status mapping; Free period restarts when a subscription ends; Customer Portal link + fake-customer message; all 7 test presets |
-| Personas | Standard personas exist via migration; Creator limit of 5 custom (concurrent creates can't make a 6th); Free blocked + `PERSONA_LOCKED`; field validation; edit bumps `updated_at`; soft delete keeps old reactions' names; downgrade locks custom personas; Free "1 persona per post" locks in (reactions only) |
+| Personas | Standard personas exist via migration; Creator limit of 5 custom (concurrent creates can't make a 6th); Free blocked + `PERSONA_LOCKED`; field validation; edit bumps `updated_at`; soft delete keeps old reactions' names; downgrade locks custom personas |
 | Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters; over-channel-limit read rejected; stale selection rejected; provider failure refunds; sample post never consumes; `/api/audio` requires sign-in |
 | Reactions + Tone read | Schema-valid JSON parsed; invalid JSON → retry once → friendly error, nothing consumed; cache by text hash; "Text changed: refresh"; 60 LLM calls / hour cap |
 | Versions + scheduling | Version only on successful Buffer save + changed text; restore doesn't rewrite history; schedule with `dueAt` (timezone per Step 9) |
@@ -674,7 +735,7 @@ Full rules: "Step 6 Decisions". Tickets: `context/tickets/06-composer.md`.
 
 ### 6. Personas
 Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.md`.
-- [ ] Persona model: name, bio, voice avatar (icon from a fixed set), ElevenLabs voice ID, reader description, reaction prompt, `updated_at`
+- [ ] Persona model: name, bio, voice avatar (icon from a fixed set), ElevenLabs voice ID, reader description, `updated_at` (reaction prompts built in code, Step 8)
 - [ ] 3 standard personas on every plan: The Skeptic, The Scroller, The Fan
 - [ ] Persona picker (voice avatar cards; remembered per post; locked cards on Free)
 - [ ] Custom personas — Creator, max 5 (name, bio, "Who is this reader?", icon, voice from ~8 with static previews); edit + soft delete. **Never cut** (demo upgrade trigger).
@@ -687,8 +748,8 @@ Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.m
 - [ ] Static audio (voice previews, landing clips, sample post reads) generated once by `npm run audio:static`
 
 ### 8. Analysis
-- [ ] Persona reaction (LLM, 1–2 sentences), gated by plan
-- [ ] **Tone read** — one tone result for the whole post (per-sentence "tone heat map" is stretch)
+- [ ] Persona reaction (LLM, 1–2 sentences); Free = 3 standard personas, Creator = + custom
+- [ ] **Tone read** — one label (fixed list) + summary for the whole post (per-sentence "tone heat map" is stretch)
 
 ### 9. Versions & Publishing
 - [ ] Version history: snapshot + restore (Free: last 3)

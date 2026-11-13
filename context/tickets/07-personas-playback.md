@@ -172,7 +172,7 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 **Plan behavior:** same buttons on every plan; limits enforced server-side (V7).
 **Blocked by:** V7, V8, V9; Step 6 C4, C8.
 **Files likely touched:** `src/components/ReadAloud/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/playback.spec.ts`
-**Out of scope:** usage meter refresh beyond calling P15's refresh hook if merged.
+**Out of scope:** usage meter refresh beyond calling P15's refresh hook if merged; the Free review-cost note (Step 8 R11 adds it so V10 isn't blocked on Step 8).
 
 ---
 
@@ -212,14 +212,14 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 **Acceptance criteria**
 - [ ] `createPersona` / `updatePersona` validate: name 1–40, bio ≤ 160, reader description 1–500, `isCustomVoice`, `isAvatarKey` (`VALIDATION` with field errors)
 - [ ] Effective plan must be Creator (`PLAN_REQUIRED`); create locks the user row and rejects a 6th non-deleted persona (`PERSONA_LIMIT`)
-- [ ] `reaction_prompt` built by `buildReactionPrompt(persona)` (placeholder template; Step 8 owns the final wording); update bumps `updated_at`
+- [ ] Update bumps `updated_at` (no `reaction_prompt` column: Step 8 builds prompts in code)
 - [ ] `listPersonas(user)` returns standard + own non-deleted custom with a `locked` flag
 - [ ] Integration tests: limit race (two concurrent creates at 4 → one succeeds), Free rejected, validation, other user's persona → `PERSONA_NOT_FOUND`
 
 **Plan behavior:** Creator: 5 custom. Free: none (existing ones locked). Never consumes usage.
 **Blocked by:** V1, V2; Step 1 T4; Step 3 S3.
 **Files likely touched:** `src/server/personas/*.ts`, tests
-**Out of scope:** reaction prompt wording + injection guard (Step 8).
+**Out of scope:** reaction prompts + injection guard (Step 8 R3).
 
 ---
 
@@ -270,7 +270,7 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 ---
 
 ## Noted for later steps (not drafted here)
-- **Step 8 (reactions):** reactions older than the persona's `updated_at` show "Persona changed: refresh". The custom "Who is this reader?" text goes into the prompt as quoted data, never instructions (prompt-injection guard). `buildReactionPrompt` placeholder from V13 gets its final wording. Free 1-persona-per-post is reactions only; playback never locks a persona.
+- **Step 8 (reactions):** reactions older than the persona's `updated_at` show "Persona changed: refresh". The custom "Who is this reader?" text goes into the prompt as quoted data, never instructions (prompt-injection guard). Step 8 builds prompts in code at request time (`personas.reaction_prompt` removed); Free 1-persona-per-post was removed.
 - **Step 10 (pages):** sample post row uses `src/content/sample-post.ts` (V16); landing persona showcase plays `/demo/landing-<persona>.mp3`.
 - **Design Pass:** voice avatar artwork replaces V2's placeholder icons; speaking indicator polish.
 - **Stretch:** streaming playback, speed control, scrubbing, side-by-side compare, custom avatar uploads, blob cleanup.

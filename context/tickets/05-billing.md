@@ -250,7 +250,7 @@ No Step 5 migration: the schema already has every billing column.
 ---
 
 ## Noted for later steps (not drafted here)
-- **Free 1-persona-per-post after downgrade** (new requests only) → Step 8 (Reactions)
+- ~~**Free 1-persona-per-post after downgrade**~~ → removed in Step 8 (Free gets all 3 standard personas)
 - **Custom personas locked on downgrade** (exercised by `free-downgraded`) → Step 7 (Personas)
 - **Pricing page layout + copy, dashboard placement of the teaser card** → Step 10
 - **Demo script:** sign in as `free` → hit limit → Checkout with 4242 → success page → custom persona → Step 11

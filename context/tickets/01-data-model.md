@@ -41,7 +41,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 ## T3 · `feat: standard personas migration`
 **Labels:** `MVP`, `database`, `personas`
 **Acceptance criteria**
-- [ ] A migration inserts 3 standard personas (`user_id = NULL`) with name, bio, `avatar_key`, `elevenlabs_voice_id` and `reaction_prompt`
+- [ ] A migration inserts 3 standard personas (`user_id = NULL`) with name, bio, `avatar_key`, `elevenlabs_voice_id` and `reader_description` (reaction prompts live in code, Step 8 R3)
 - [ ] Running the migration twice doesn't duplicate rows (fixed UUIDs, `ON CONFLICT DO NOTHING`)
 - [ ] Persona text is placeholder copy, ready to swap from `src/content/copy.ts` or the migration
 - [ ] Works on desktop 1280px+: n/a, no UI
@@ -120,7 +120,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 **Labels:** `MVP`, `analysis`
 **Acceptance criteria**
 - [ ] `src/server/llm.ts` calls Anthropic `claude-haiku-5-5` server-side only, with the key read from `ANTHROPIC_API_KEY`
-- [ ] `getReaction(persona, text)` and `getToneRead(text)` return the bible's JSON shapes, enforced by a schema
+- [ ] `getReaction(persona, text)` and `getToneRead(text)` return the bible's JSON shapes, enforced by a schema (Step 8 R2 hardens schemas, timeouts and error codes)
 - [ ] A parse or API failure retries once, then throws a typed `LlmError`
 - [ ] `LLM_PROVIDER=fixture` returns canned results from the seed fixtures (no network, used by Playwright)
 - [ ] Works on desktop 1280px+: n/a, no UI
