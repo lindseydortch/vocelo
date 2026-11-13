@@ -53,6 +53,8 @@ Pre-generate demo audio the night before so the live demo spends almost nothing.
 
 ## One-time setup (human, before build day)
 
+Tracked as `human` tickets H1–H9 in `context/tickets/00-human.md`. This list is the reference for where each value goes.
+
 1. **GitHub:** `dev` branch exists and is the default branch (bootstrap step in `context/tickets/02-infra.md`). Branch protection is applied by ticket I9.
 2. **Neon:** project with branches `main` and `dev`. Copy both **pooled** connection strings.
 3. **Netlify:** create the site from the GitHub repo; production branch `main`; **branch deploys off, deploy previews off**; add the Production env vars above.

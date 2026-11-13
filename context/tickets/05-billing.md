@@ -25,7 +25,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 2 I4, I5; Step 1 T2.
+**Blocked by:** Step 2 I4, I5; Step 1 T2.
 **Files likely touched:** `src/server/billing/stripe.ts`, `src/server/billing/customer.ts`, tests, `src/test/handlers/stripe.ts`
 **Out of scope:** checkout (P4), portal (P7).
 
@@ -41,7 +41,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** produces Creator for `active` / `trialing` / `past_due`, Free otherwise (via the Step 1 effective-plan rule).
-**Dependencies:** P1.
+**Blocked by:** P1.
 **Files likely touched:** `src/server/billing/apply-subscription.ts`, tests
 **Out of scope:** webhook parsing (P3).
 
@@ -57,7 +57,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Signed fixture tests for every bullet; works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** upgrades/downgrades flow through P2.
-**Dependencies:** P2.
+**Blocked by:** P2.
 **Files likely touched:** `src/routes/api/stripe/webhook.ts`, `src/server/billing/webhook.ts`, `src/test/fixtures/stripe-events/*.json`, tests
 **Out of scope:** refunds, disputes, invoice emails.
 
@@ -73,7 +73,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, server only
 
 **Plan behavior:** Free only; Creator (incl. `past_due`) refused.
-**Dependencies:** P1, Step 3 S3.
+**Blocked by:** P1, Step 3 S3.
 **Files likely touched:** `src/server/billing/checkout.ts`, tests
 **Out of scope:** buttons (P8, P12, P13).
 
@@ -89,7 +89,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** turns Free into Creator immediately when paid.
-**Dependencies:** P2, P4.
+**Blocked by:** P2, P4.
 **Files likely touched:** `src/routes/app/billing/success.tsx`, `src/server/billing/sync-checkout.ts`, `src/content/copy.ts`, tests, `e2e/upgrade.spec.ts`
 **Out of scope:** visual design.
 
@@ -104,7 +104,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** none.
-**Dependencies:** Step 3 S10.
+**Blocked by:** Step 3 S10.
 **Files likely touched:** `src/routes/app/billing/canceled.tsx`, `src/content/copy.ts`, `e2e/upgrade.spec.ts`
 **Out of scope:** visual design.
 
@@ -120,9 +120,9 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, server only
 
 **Plan behavior:** available to anyone with a Stripe customer (Creator, canceling, past_due, or ex-Creator).
-**Dependencies:** P1.
+**Blocked by:** P1, H6 Stripe test-mode setup.
 **Files likely touched:** `src/server/billing/portal.ts`, tests
-**Out of scope:** portal configuration (human task).
+**Out of scope:** portal configuration (H6).
 
 ---
 
@@ -135,7 +135,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] E2E: each of signed out, `free`, `creator` (Stripe mocked). Works on desktop 1280px+
 
 **Plan behavior:** CTA differs by plan as above.
-**Dependencies:** P4, P7, Step 10 pricing placeholder (or a minimal `/pricing`).
+**Blocked by:** P4, P7, Step 10 pricing placeholder (or a minimal `/pricing`).
 **Files likely touched:** `src/routes/pricing.tsx`, `src/components/PlanCta/*`, `src/content/copy.ts`, `e2e/pricing.spec.ts`
 **Out of scope:** pricing page layout + copy (Step 10).
 
@@ -150,7 +150,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** Free: posts limit 5, 8,000 chars. Creator: posts `null` (unlimited), 80,000 chars.
-**Dependencies:** Step 1 T4, T6; P14 (tests use the presets; can start with inline data).
+**Blocked by:** Step 1 T4, T6; P14 (tests use the presets; can start with inline data).
 **Files likely touched:** `src/server/usage-summary.ts`, tests
 **Out of scope:** UI (P10, P15).
 
@@ -165,7 +165,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** buttons and meters as above.
-**Dependencies:** P7, P9, P14.
+**Blocked by:** P7, P9, P14.
 **Files likely touched:** `src/routes/app/settings/billing.tsx`, `src/components/UsageMeter/*`, `src/content/copy.ts`, `e2e/billing.spec.ts`
 **Out of scope:** past_due banner (P11), visual design.
 
@@ -180,7 +180,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** past_due keeps Creator; banner only.
-**Dependencies:** P10, Step 6 composer route.
+**Blocked by:** P10, Step 6 composer route.
 **Files likely touched:** `src/components/PastDueBanner/*`, `src/routes/app/settings/billing.tsx`, `src/routes/app/posts/$id.tsx`, `e2e/billing.spec.ts`
 **Out of scope:** emails (Stripe sends its own).
 
@@ -196,7 +196,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above.
-**Dependencies:** P4, P9, Step 7 playback (wiring point).
+**Blocked by:** P4, P9, Step 7 playback (wiring point).
 **Files likely touched:** `src/components/LimitReached/*`, `src/content/copy.ts`, `e2e/limits.spec.ts`
 **Out of scope:** character top-ups (stretch).
 
@@ -212,7 +212,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above. First item to cut if time runs out.
-**Dependencies:** P4, Step 1 T7, Step 10 dashboard placeholder.
+**Blocked by:** P4, Step 1 T7, Step 10 dashboard placeholder.
 **Files likely touched:** `src/server/posts/locked-count.ts`, `src/components/LockedTeaser/*`, `src/content/copy.ts`, tests
 **Out of scope:** deleting locked posts (stretch).
 
@@ -228,7 +228,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** this ticket *is* the plan matrix.
-**Dependencies:** Step 2 I12, I13, I14; Step 1 T6.
+**Blocked by:** Step 2 I12, I13, I14; Step 1 T6.
 **Files likely touched:** `src/test/presets.ts`, `src/test/factories.ts`, `scripts/seed.ts`, `src/routes/__test/login.ts`, tests
 **Out of scope:** real Stripe test customers (stretch).
 
@@ -243,7 +243,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above.
-**Dependencies:** P9, Step 6 composer route.
+**Blocked by:** P9, Step 6 composer route.
 **Files likely touched:** `src/components/UsageMeter/*`, `src/routes/app/posts/$id.tsx`, `e2e/billing.spec.ts`
 **Out of scope:** visual design.
 

@@ -55,14 +55,8 @@ Output of grilling Step 0. Sections below are already updated to match.
 - Buffer rate limit (reported): 100 requests / 15 min per client. Cache channel + draft lists.
 
 ### Before build day (human tasks, not agent tickets)
-1. ~~Register a Buffer app client → confirm OAuth works~~ ✅ Done 2026-11-12 (consent + redirect verified)
-2. Point Namecheap nameservers to Cloudflare (24–48 h propagation). **Not blocking** (Step 2): production starts on the `netlify.app` URL
-3. ~~Decide hosting + LLM provider~~ ✅ Netlify + Anthropic Haiku 5.5 (Step 1). Create the Netlify site + Anthropic API key
-4. Create Stripe Creator product/price (test mode); configure the test-mode Customer Portal, "limit customers to one subscription", and "cancel when retries run out" (Step 5)
-5. Buy ElevenLabs Starter ($6); pick 3 stock voice IDs for standard personas; create one API key per environment with a credit quota (Step 2)
-6. Publish `/privacy` + `/terms` at real URLs (Buffer app client + Stripe need them)
-7. Register a second Buffer app client for production (redirect `https://<site>.netlify.app/auth/callback`) (Step 2)
-8. Full checklist with where each value goes: `context/environments.md`
+- ~~Register a Buffer app client → confirm OAuth works~~ ✅ Done 2026-11-12 (consent + redirect verified)
+- Everything else is a `human` ticket: **`context/tickets/00-human.md`** (H1–H9). Where each value goes: `context/environments.md`.
 
 ### Ticket sizing
 A ticket is ~1–2 h **including its tests**; never make tests a separate ticket. There is no ticket budget (removed in Step 2): build whatever the MVP needs. Cut order if time runs out is in section 12.

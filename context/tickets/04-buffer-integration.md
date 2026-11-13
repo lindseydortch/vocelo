@@ -27,7 +27,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 1 T2, Step 3 S1 (migration order).
+**Blocked by:** Step 1 T2, Step 3 S1 (migration order).
 **Files likely touched:** `src/db/schema/*.ts`, `drizzle/00XX_*.sql`, `src/db/schema.test.ts`
 **Out of scope:** using the columns (B5, B6).
 
@@ -42,7 +42,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 2 I5.
+**Blocked by:** Step 2 I5.
 **Files likely touched:** `src/lib/char-count.ts`, `src/lib/char-count.test.ts`, `package.json` (`twitter-text`)
 **Out of scope:** the live counter UI (Step 6), X Premium limits (stretch).
 
@@ -58,7 +58,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 3 S4, S9.
+**Blocked by:** Step 3 S4, S9.
 **Files likely touched:** `src/server/buffer/queries.ts`, `src/server/buffer/queries.test.ts`, `src/test/handlers/buffer.ts`
 **Out of scope:** caching (B5), mutations (B4).
 
@@ -74,7 +74,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** B3.
+**Blocked by:** B3.
 **Files likely touched:** `src/server/buffer/mutations.ts`, `src/server/buffer/mutations.test.ts`, `src/lib/errors.ts`, `src/test/handlers/buffer.ts`
 **Out of scope:** scheduling modes (Step 9), save orchestration (B8).
 
@@ -90,7 +90,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B1, B3.
+**Blocked by:** B1, B3.
 **Files likely touched:** `src/server/buffer/channels.ts`, `src/server/buffer/channels.test.ts`
 **Out of scope:** the picker UI (B7).
 
@@ -106,7 +106,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** 30 / hour on every plan.
-**Dependencies:** B1, Step 1 T6.
+**Blocked by:** B1, Step 1 T6.
 **Files likely touched:** `src/server/usage.ts`, `src/server/usage.test.ts`
 **Out of scope:** UI message (B11, B15).
 
@@ -122,7 +122,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): pick a channel → composer opens; empty state renders. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B5, Step 6 composer route.
+**Blocked by:** B5, Step 6 composer route.
 **Files likely touched:** `src/routes/app/posts/new.tsx`, `src/components/ChannelPicker/*`, `src/server/posts/create-post.ts`, `src/content/copy.ts`, `e2e/new-post.spec.ts`
 **Out of scope:** visual design, editor itself (Step 6).
 
@@ -138,7 +138,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Integration tests for each case above; works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** same on every plan; never counts as a review. Locked posts are rejected (history window).
-**Dependencies:** B2, B4, B6.
+**Blocked by:** B2, B4, B6.
 **Files likely touched:** `src/server/posts/save-draft.ts`, `src/server/posts/save-draft.test.ts`
 **Out of scope:** existing drafts (B9), UI (B11).
 
@@ -154,7 +154,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B8.
+**Blocked by:** B8.
 **Files likely touched:** `src/server/posts/save-draft.ts`, `src/server/posts/save-draft.test.ts`
 **Out of scope:** "Save as a new draft" (B10).
 
@@ -170,7 +170,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B9.
+**Blocked by:** B9.
 **Files likely touched:** `src/server/posts/save-as-new-draft.ts`, tests
 **Out of scope:** UI (B11).
 
@@ -186,7 +186,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): save → Saved; scheduled → Save as a new draft. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B9, B10, Step 6 composer.
+**Blocked by:** B9, B10, Step 6 composer.
 **Files likely touched:** `src/components/SaveDraft/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/save-draft.spec.ts`
 **Out of scope:** reconnect dialog (Step 6), visual design.
 
@@ -201,7 +201,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Integration tests for each branch; E2E: composer opens when Buffer is mocked as down. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B3, Step 6 composer route.
+**Blocked by:** B3, Step 6 composer route.
 **Files likely touched:** `src/server/posts/sync-status.ts`, `src/routes/app/posts/$id.tsx`, tests
 **Out of scope:** dashboard badges (B16).
 
@@ -217,7 +217,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B2, B5.
+**Blocked by:** B2, B5.
 **Files likely touched:** `src/server/buffer/import-list.ts`, tests, `src/test/handlers/buffer.ts`
 **Out of scope:** "Load more" (stretch), the import action (B14).
 
@@ -233,7 +233,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** free on every plan; Free users' imports are never immediately locked.
-**Dependencies:** B6, B13.
+**Blocked by:** B6, B13.
 **Files likely touched:** `src/server/buffer/import-draft.ts`, tests
 **Out of scope:** UI (B15).
 
@@ -248,7 +248,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): import a draft → lands in composer; empty state. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B14, Step 10 dashboard placeholder (or a minimal `/app` from S10).
+**Blocked by:** B14, Step 10 dashboard placeholder (or a minimal `/app` from S10).
 **Files likely touched:** `src/components/ImportPanel/*`, `src/routes/app/index.tsx`, `src/content/copy.ts`, `e2e/import.spec.ts`
 **Out of scope:** dashboard post list (Step 10), visual design.
 
@@ -263,7 +263,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Dependencies:** B1, Step 10 dashboard placeholder.
+**Blocked by:** B1, Step 10 dashboard placeholder.
 **Files likely touched:** `src/components/StatusBadge/*`, `src/lib/buffer-status.ts`, `src/content/copy.ts`, `e2e/dashboard.spec.ts`
 **Out of scope:** refreshing statuses in bulk (never), visual design.
 

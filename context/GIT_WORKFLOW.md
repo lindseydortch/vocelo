@@ -58,7 +58,33 @@ Use this when working on several tickets at once, or when running more than one 
 
 ---
 
+## Human Tickets + Blockers
+
+### `human` label
+- Anything only the human can do (accounts, dashboards, payments, API keys, clicking through real OAuth) is its **own ticket** labeled `human`. Drafts: `context/tickets/00-human.md`.
+- Never put a human step inside an agent ticket. Split it out and list it under **Blocked by** so the agent ticket can't start until it's done.
+- Agents never start, work on, or close a `human` ticket. The human closes it with `gh issue close <N> --reason completed`.
+
+### Blocked by
+- Every ticket lists its blockers **twice**: a `**Blocked by:** #3, #7` line in the body (readable) **and** native GitHub links (`gh issue create --blocked-by 3,7` / `gh issue edit <N> --add-blocked-by 3,7`), which show the "Blocked" badge on GitHub. The scripts read both and use the union.
+- A blocker is **resolved** only when:
+  - **Agent ticket:** closed as *completed* **and** its branch (`<type>/<N>-<slug>`) was merged by PR into `dev` (or `main` for hotfixes). Closing an issue by hand does not count.
+  - **`human` ticket:** closed as *completed*.
+- A blocker closed as *not planned* or *duplicate* still blocks. If the dependency really went away, the human removes the link (`gh issue edit <N> --remove-blocked-by <B>`) and edits the body line.
+- **Never start a ticket with an unresolved blocker.** `ticket-start.sh` refuses it. There is no override.
+
+### What can I work on?
+```bash
+./scripts/ticket-next.sh
+```
+Prints four lists: **Ready** (agent tickets with nothing blocking and no branch yet), **In progress** (branch exists), **Your queue** (open `human` tickets, the ones that unblock the most work first), and **Blocked** (each ticket with the blocker(s) holding it and why).
+
+---
+
 ## Ticket Lifecycle
+
+### 0. Pick a ticket
+Run `./scripts/ticket-next.sh` and pick only from **Ready**. Do your **Your queue** items first when they unblock things.
 
 ### 1. Start
 ```bash
@@ -69,7 +95,7 @@ Use this when working on several tickets at once, or when running more than one 
 ./scripts/ticket-start.sh 12 stripe-checkout feat --worktree
 cd ~/Documents/personal-dev/buffer-commit/vocelo-worktrees/12-stripe-checkout
 ```
-The script creates the branch from the latest `dev`, pushes it, and writes `.ticket.env` with this issue's **branch, folder, port** (`3000 + issue #`) and **browser profile**.
+The script first runs `ticket-next.sh --check <issue>` and **stops** if the issue is closed, labeled `human`, or has an unresolved blocker. Then it creates the branch from the latest `dev`, pushes it, and writes `.ticket.env` with this issue's **branch, folder, port** (`3000 + issue #`) and **browser profile**.
 
 ### 2. Before every work session (humans and agents)
 ```bash
@@ -188,6 +214,9 @@ BRANCH="$TYPE/$ISSUE-$SLUG"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PORT=$((3000 + ISSUE % 1000))
 
+# Refuse closed issues, human tickets, and tickets with unresolved blockers. No override.
+"$REPO_ROOT/scripts/ticket-next.sh" --check "$ISSUE"
+
 git -C "$REPO_ROOT" fetch origin
 
 if [ "$MODE" = "--worktree" ]; then
@@ -225,6 +254,75 @@ echo "   Folder:  $DIR"
 echo "   Port:    $PORT"
 echo "   Browser: $PROFILE"
 ```
+
+### `scripts/ticket-next.sh`
+```bash
+#!/usr/bin/env bash
+# ticket-next.sh             → Ready / In progress / Your queue / Blocked
+# ticket-next.sh --check <N> → exit 1 if #N is closed, human, or blocked (ticket-start.sh runs this)
+set -euo pipefail
+
+ISSUES=$(gh issue list --state all --limit 1000 \
+  --json number,title,state,stateReason,labels,body,blockedBy)
+MERGED=$(gh pr list --state merged --limit 1000 --json headRefName,baseRefName \
+  --jq '[.[] | select(.baseRefName == "dev" or .baseRefName == "main") | .headRefName]')
+BRANCHES=$(git ls-remote --heads origin | sed 's#.*refs/heads/##' | jq -R . | jq -s .)
+
+# One row per open issue. Blockers = native links ∪ "**Blocked by:** #…" line in the body.
+# Resolved: human ticket closed as completed; agent ticket closed as completed AND its
+# branch <type>/<N>-<slug> merged into dev/main. Everything else is listed with the reason.
+REPORT=$(jq --argjson merged "$MERGED" --argjson branches "$BRANCHES" '
+  def human: any(.labels[]; .name == "human");
+  def branch_for($n): first($branches[] | select(test("^[a-z]+/\($n)-"))) // null;
+  (map({key: (.number|tostring), value: .}) | from_entries) as $by
+  | map(select(.state == "OPEN"))
+  | map(. as $i
+      | ( [.blockedBy.nodes[].number]
+          + ([(.body // "") | split("\n")[] | select(test("^\\*\\*Blocked by:\\*\\*"; "i"))
+              | [scan("#([0-9]+)")[0] | tonumber]] | add // []) )
+      | unique
+      | map(. as $b | $by[$b|tostring] as $x
+          | if $x == null then {n:$b, why:"not found"}
+            elif $x.state == "OPEN" then {n:$b, why:"open"}
+            elif $x.stateReason != "COMPLETED" then {n:$b, why:"closed as \($x.stateReason), not completed"}
+            elif ($x|human) then empty
+            elif any($merged[]; test("^[a-z]+/\($b)-")) then empty
+            else {n:$b, why:"closed, but no merged PR"} end)
+      | {number:$i.number, title:$i.title, human:($i|human),
+         branch: branch_for($i.number), unresolved: .})
+' <<<"$ISSUES")
+
+if [ "${1:-}" = "--check" ]; then
+  N="${2:?Usage: ticket-next.sh --check <issue#>}"
+  ROW=$(jq --argjson n "$N" '.[] | select(.number == $n)' <<<"$REPORT")
+  [ -n "$ROW" ] || { echo "❌ #$N is not an open issue."; exit 1; }
+  [ "$(jq .human <<<"$ROW")" = "false" ] || {
+    echo "❌ #$N is a human ticket. Only the human works it; agents never start it."; exit 1; }
+  if [ "$(jq '.unresolved | length' <<<"$ROW")" != "0" ]; then
+    echo "❌ #$N is blocked. Do not start any work on it until these are resolved:"
+    jq -r '.unresolved[] | "   #\(.n): \(.why)"' <<<"$ROW"
+    exit 1
+  fi
+  echo "✅ #$N has no unresolved blockers."
+  exit 0
+fi
+
+echo "✅ Ready (agent tickets, nothing blocking):"
+jq -r '.[] | select((.human|not) and (.unresolved|length == 0) and .branch == null)
+  | "   #\(.number) \(.title)"' <<<"$REPORT"
+echo; echo "🔨 In progress (branch exists):"
+jq -r '.[] | select(.branch != null) | "   #\(.number) \(.title) · \(.branch)"' <<<"$REPORT"
+echo; echo "🙋 Your queue (human tickets, most-unblocking first):"
+jq -r '. as $all | map(select(.human))
+  | map(. as $h | .blocks = ([$all[] | select(any(.unresolved[]; .n == $h.number))] | length))
+  | sort_by(-.blocks) | .[]
+  | "   #\(.number) \(.title) · unblocks \(.blocks)"
+    + (if (.unresolved|length) > 0 then " · waiting on " + ([.unresolved[].n | "#\(.)"] | join(", ")) else "" end)' <<<"$REPORT"
+echo; echo "⛔ Blocked (do not start):"
+jq -r '.[] | select((.human|not) and (.unresolved|length > 0))
+  | "   #\(.number) \(.title) ← " + ([.unresolved[] | "#\(.n) \(.why)"] | join(", "))' <<<"$REPORT"
+```
+Requires `jq` (ships with macOS 15+).
 
 ### `scripts/ticket-check.sh`
 ```bash
@@ -448,6 +546,10 @@ test-results/
 ## Git workflow (MANDATORY)
 - One issue = one branch = one folder = one port = one browser profile = one agent.
 - You are assigned exactly ONE issue. Only work on that issue.
+- Never start, work on, or close an issue labeled `human`. If your ticket turns out to need a human step,
+  STOP and report it so the human can split it into a `human` ticket that blocks yours.
+- Never start an issue with an unresolved blocker (`./scripts/ticket-next.sh --check <N>` fails).
+  Do not work around it, partially implement it, or stub the blocker's code. Report and wait.
 - BEFORE editing, committing, running servers, or opening browsers, run `./scripts/ticket-check.sh`.
   If it fails, STOP and report. Do not try to fix it by switching branches or folders.
 - Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself.

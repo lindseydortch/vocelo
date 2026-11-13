@@ -24,7 +24,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 1 T2, Step 2 I6.
+**Blocked by:** Step 1 T2, Step 2 I6.
 **Files likely touched:** `src/server/db/schema.ts`, `drizzle/00XX_*.sql`
 **Out of scope:** using either column (S7, Step 4, Step 9).
 
@@ -40,7 +40,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 2 I4, I5.
+**Blocked by:** Step 2 I4, I5.
 **Files likely touched:** `src/server/auth/crypto.ts`, `src/server/auth/crypto.test.ts`, `src/server/env.ts`
 **Out of scope:** key rotation.
 
@@ -56,7 +56,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none (plan is read elsewhere).
-**Dependencies:** Step 1 T2, Step 2 I4, I6, I13.
+**Blocked by:** Step 1 T2, Step 2 I4, I6, I13.
 **Files likely touched:** `src/server/auth/session.ts`, `src/server/auth/session.test.ts`
 **Out of scope:** route guards (S10), sign-in itself (S7).
 
@@ -72,7 +72,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Integration tests (MSW) for each case above; works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** Step 2 I4, I5.
+**Blocked by:** Step 2 I4, I5.
 **Files likely touched:** `src/server/buffer/client.ts`, `src/server/buffer/client.test.ts`, `src/test/handlers/buffer.ts`
 **Out of scope:** token refresh and retry (S8, S9), any specific query beyond a test query.
 
@@ -88,7 +88,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, redirect only
 
 **Plan behavior:** none.
-**Dependencies:** Step 2 I4, I5.
+**Blocked by:** Step 2 I4, I5.
 **Files likely touched:** `src/routes/auth/buffer/start.ts`, `src/server/auth/pkce.ts`, `src/server/auth/return-to.ts`, tests
 **Out of scope:** the callback (S6).
 
@@ -104,7 +104,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Integration tests (MSW) for each branch, and no DB rows on any failure; works on desktop 1280px+: n/a, redirect only
 
 **Plan behavior:** none.
-**Dependencies:** S5, S7.
+**Blocked by:** S5, S7.
 **Files likely touched:** `src/routes/auth/callback.ts`, `src/server/auth/exchange.ts`, tests, `src/test/handlers/buffer.ts`
 **Out of scope:** the error page UI (S12).
 
@@ -120,7 +120,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** returning users keep their plan; new users are Free.
-**Dependencies:** S1, S2, S3, S4.
+**Blocked by:** S1, S2, S3, S4.
 **Files likely touched:** `src/server/auth/complete-sign-in.ts`, `src/server/posts/sample-post.ts` (stub), tests
 **Out of scope:** the sample post's content (Step 10), org switching (stretch).
 
@@ -136,7 +136,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** S2, S4, Step 2 I6.
+**Blocked by:** S2, S4, Step 2 I6.
 **Files likely touched:** `src/server/auth/buffer-token.ts`, `src/server/auth/buffer-token.test.ts`, `src/test/handlers/buffer.ts`
 **Out of scope:** retry around GraphQL calls (S9), clearing the session (callers).
 
@@ -152,7 +152,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** S8.
+**Blocked by:** S8.
 **Files likely touched:** `src/server/buffer/with-buffer.ts`, `src/server/buffer/with-buffer.test.ts`, `src/lib/errors.ts`
 **Out of scope:** the composer's reconnect dialog (Step 6).
 
@@ -168,7 +168,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: placeholder `/app` renders
 
 **Plan behavior:** same for every plan.
-**Dependencies:** S3, Step 2 I14.
+**Blocked by:** S3, Step 2 I14.
 **Files likely touched:** `src/routes/app/route.tsx`, `src/routes/signin.tsx`, `e2e/auth.spec.ts`
 **Out of scope:** dashboard content (Step 10).
 
@@ -184,7 +184,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+, placeholder styling only
 
 **Plan behavior:** none.
-**Dependencies:** S5, S10.
+**Blocked by:** S5, S10.
 **Files likely touched:** `src/routes/signin.tsx`, `src/routes/signin.module.scss`, `src/content/copy.ts`, `e2e/auth.spec.ts`
 **Out of scope:** landing page CTA (Step 10), visual design.
 
@@ -200,7 +200,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+, placeholder styling only
 
 **Plan behavior:** none.
-**Dependencies:** S5.
+**Blocked by:** S5.
 **Files likely touched:** `src/routes/auth/error.tsx`, `src/routes/auth/error.module.scss`, `src/content/copy.ts`, `e2e/auth-error.spec.ts`
 **Out of scope:** retry logic beyond the link.
 
@@ -215,7 +215,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** same for every plan.
-**Dependencies:** S3, S10.
+**Blocked by:** S3, S10.
 **Files likely touched:** `src/server/auth/sign-out.ts`, `src/routes/app/settings/index.tsx`, tests, `e2e/auth.spec.ts`
 **Out of scope:** full settings page (Step 10).
 
@@ -231,7 +231,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** billing warning shows for Creator, not Free.
-**Dependencies:** S3, S10, S13 (shares the settings placeholder).
+**Blocked by:** S3, S10, S13 (shares the settings placeholder).
 **Files likely touched:** `src/server/auth/disconnect.ts`, `src/routes/app/settings/index.tsx`, `src/content/copy.ts`, tests
 **Out of scope:** cancelling Stripe, account deletion (stretch).
 
@@ -247,7 +247,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 - [ ] Works on desktop 1280px+: n/a, redirect only
 
 **Plan behavior:** signs in as whatever plan that Buffer account's Vocelo user has.
-**Dependencies:** S7, Step 2 I10.
+**Blocked by:** S7, Step 2 I10.
 **Files likely touched:** `src/routes/__dev/login.ts`, `scripts/check-build-env.ts`, tests, `README.md`
 **Out of scope:** E2E helper (I14 covers tests).
 

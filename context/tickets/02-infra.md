@@ -19,10 +19,13 @@ Config-only tickets need no new tests (per GIT_WORKFLOW), but `npm run verify` m
 ## B · Bootstrap (coordinator, not a ticket)
 Branch protection doesn't exist yet, so the coordinating session does this directly. Ticket scripts need `dev` and the scripts themselves.
 - [ ] Create `dev` from `main`, push it, set it as the GitHub default branch
-- [ ] Commit `scripts/ticket-start.sh`, `ticket-check.sh`, `ticket-cleanup.sh` from `GIT_WORKFLOW.md` (executable)
+- [ ] Commit `scripts/ticket-start.sh`, `ticket-check.sh`, `ticket-next.sh`, `ticket-cleanup.sh` from `GIT_WORKFLOW.md` (executable)
 - [ ] Commit `.gitignore` (from `GIT_WORKFLOW.md`, plus `node_modules/`, `dist/`, `.netlify/`, `coverage/`) and `.github/pull_request_template.md`
 - [ ] Paste "Rules for AI Agents" from `GIT_WORKFLOW.md` into `CLAUDE.md`
-- [ ] Create GitHub Issues from the Step 1 + Step 2 drafts
+- [ ] Create labels: `human` (only the human can do it), `MVP`, `stretch`, plus the area labels used in the drafts
+- [ ] Create GitHub Issues from `00-human.md` first, then the Step 1 + Step 2 drafts, in merge order (so every blocker already has an issue number)
+- [ ] For each draft, translate its **Blocked by** IDs (`T2`, `H1`, …) to issue numbers. Write them in the body (`**Blocked by:** #3, #7`) **and** set the native link: `gh issue create … --blocked-by 3,7` (or `gh issue edit <N> --add-blocked-by 3,7`)
+- [ ] Run `./scripts/ticket-next.sh` and confirm the blocked list matches the drafts' merge order
 
 ---
 
@@ -36,7 +39,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: placeholder page renders
 
 **Plan behavior:** none.
-**Dependencies:** B.
+**Blocked by:** B.
 **Files likely touched:** `package.json`, `vite.config.ts`, `tsconfig.json`, `.nvmrc`, `.prettierrc`, `src/routes/__root.tsx`, `src/routes/index.tsx`
 **Out of scope:** lint, styles, tests, env validation, Netlify plugin, every other page.
 
@@ -51,7 +54,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I1.
+**Blocked by:** I1.
 **Files likely touched:** `eslint.config.js`, `package.json`
 **Out of scope:** Stylelint, git hooks (decided: none).
 
@@ -66,7 +69,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: placeholder page has no horizontal scroll at 1280px or 375px
 
 **Plan behavior:** none.
-**Dependencies:** I1.
+**Blocked by:** I1.
 **Files likely touched:** `src/styles/global.scss`, `src/styles/_variables.scss`, `src/styles/_mixins.scss`, `src/routes/index.module.scss`
 **Out of scope:** brand colors, fonts, any visual design (Design Pass).
 
@@ -82,7 +85,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I1, I5.
+**Blocked by:** I1, I5.
 **Files likely touched:** `src/server/env.ts`, `src/server/env.test.ts`, `.env.example`
 **Out of scope:** the `E2E_AUTH` production guard (I10), secret rotation.
 
@@ -98,7 +101,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I1.
+**Blocked by:** I1.
 **Files likely touched:** `vitest.config.ts`, `src/test/setup.ts`, `src/test/msw.ts`, `src/lib/clock.ts`, `src/lib/clock.test.ts`
 **Out of scope:** database (I6), provider handlers (added by each integration ticket), factories (I13).
 
@@ -114,7 +117,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I5, Step 1 T1.
+**Blocked by:** I5, Step 1 T1.
 **Files likely touched:** `src/test/global-setup.ts`, `src/test/db.ts`, `vitest.config.ts`, `package.json`
 **Out of scope:** factories (I13), seed data (I12). Fallback if the package misbehaves: Homebrew `postgresql@18` on port 5433 (note in the PR, don't switch silently).
 
@@ -129,7 +132,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: smoke test uses a 1280px viewport
 
 **Plan behavior:** none.
-**Dependencies:** I1.
+**Blocked by:** I1.
 **Files likely touched:** `playwright.config.ts`, `e2e/smoke.spec.ts`, `package.json`, `README.md`
 **Out of scope:** the sign-in helper (I14), feature flows.
 
@@ -145,7 +148,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I2, I5, I6, I7.
+**Blocked by:** I2, I5, I6, I7.
 **Files likely touched:** `.github/workflows/ci.yml`
 **Out of scope:** deploys (Netlify builds `main` itself), branch protection (I9).
 
@@ -161,7 +164,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I8.
+**Blocked by:** I8.
 **Files likely touched:** `scripts/setup-github.sh`
 **Out of scope:** Netlify settings.
 
@@ -177,9 +180,9 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I4, Step 1 T1.
+**Blocked by:** I4, Step 1 T1.
 **Files likely touched:** `netlify.toml`, `vite.config.ts`, `package.json`, `scripts/check-build-env.ts`, `scripts/check-build-env.test.ts`
-**Out of scope:** creating the Netlify site + env vars (human), custom domain, the release PR.
+**Out of scope:** creating the Netlify site + env vars (H4), custom domain, the release PR.
 
 ---
 
@@ -193,7 +196,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** seeds one user per purchasable plan.
-**Dependencies:** Step 1 T2, I6.
+**Blocked by:** Step 1 T2, I6.
 **Files likely touched:** `scripts/seed/index.ts`, `scripts/seed/guard.ts`, `scripts/seed/*.test.ts`, `package.json`
 **Out of scope:** posts, reactions, fixtures (I12).
 
@@ -209,7 +212,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** Free user's 45-day post is locked; Creator's is visible; Creator's 13-month post is locked.
-**Dependencies:** I11, Step 1 T3.
+**Blocked by:** I11, Step 1 T3.
 **Files likely touched:** `scripts/seed/posts.ts`, `fixtures/llm/*.json`
 **Out of scope:** the per-user sample post (Step 10), static demo audio in `/public/demo/` (Step 7/10).
 
@@ -225,7 +228,7 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** factories can build every effective-plan state.
-**Dependencies:** Step 1 T2, I6.
+**Blocked by:** Step 1 T2, I6.
 **Files likely touched:** `src/test/factories.ts`, `src/test/factories.test.ts`
 **Out of scope:** MSW handlers per provider (each integration ticket adds its own success + error variants to `src/test/handlers/`).
 
@@ -240,6 +243,6 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** signs in as either plan.
-**Dependencies:** Step 3 session cookie ticket, I7, I13. (Build-time guard is in I10.)
+**Blocked by:** Step 3 session cookie ticket, I7, I13. (Build-time guard is in I10.)
 **Files likely touched:** `src/routes/__test/login.ts`, `e2e/helpers/auth.ts`
 **Out of scope:** real Buffer OAuth.

@@ -13,7 +13,9 @@ Don't duplicate these docs. If they conflict, **ask the human**; don't pick one 
 - Design direction (decided last, in the Design Pass)
 
 ## Tickets (GitHub Issues)
-Title `<type>: <description>` · labels (`MVP`/`stretch` + area) · acceptance criteria (incl. "works on desktop 1280px+") · plan behavior · dependencies · files likely touched · out of scope.
+Title `<type>: <description>` · labels (`MVP`/`stretch` + area, plus `human` if only the human can do it) · acceptance criteria (incl. "works on desktop 1280px+") · plan behavior · **Blocked by** (in the body *and* as native GitHub links) · files likely touched · out of scope.
+
+**Human work** gets its own `human` ticket (drafts in `context/tickets/00-human.md`); never mix a human step into an agent ticket. **Never start a ticket with an unresolved blocker**: `ticket-start.sh` enforces it, and `./scripts/ticket-next.sh` shows what's ready. Rules: `context/GIT_WORKFLOW.md` → "Human Tickets + Blockers".
 
 **Keep tickets small:** one concern, ~1–2 hours, a handful of files, and mergeable + testable on its own. If a ticket has "and" in its title or more than ~5 acceptance criteria, split it.
 

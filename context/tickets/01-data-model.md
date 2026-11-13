@@ -16,7 +16,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** I1 scaffold + I4 env validation (Step 2), Neon project with a `dev` branch.
+**Blocked by:** I1 scaffold + I4 env validation (Step 2), H1 Neon project.
 **Files likely touched:** `package.json`, `drizzle.config.ts`, `src/db/client.ts`, `.env.example`
 **Out of scope:** tables, seed script, production branch wiring.
 
@@ -32,7 +32,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** `users.plan` defaults to `free`. `period_anchor_at` defaults to `now()`.
-**Dependencies:** T1.
+**Blocked by:** T1.
 **Files likely touched:** `src/db/schema/*.ts`, `drizzle/0001_*.sql`
 **Out of scope:** standard persona rows (T3), query helpers, token encryption (Step 3).
 
@@ -47,7 +47,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** available on every plan.
-**Dependencies:** T2, plus the 3 ElevenLabs stock voice IDs (human task).
+**Blocked by:** T2, H2 ElevenLabs voice IDs.
 **Files likely touched:** `drizzle/0002_standard_personas.sql`
 **Out of scope:** custom personas, the curated custom-voice list, avatar artwork.
 
@@ -63,7 +63,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** this function defines what plan and period mean everywhere.
-**Dependencies:** T2 (types only).
+**Blocked by:** T2 (types only).
 **Files likely touched:** `src/server/plan.ts`, `src/server/plan.test.ts`
 **Out of scope:** Stripe webhooks that write these columns (Step 5).
 
@@ -78,7 +78,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** everyone is unlimited until T6 lands.
-**Dependencies:** T1.
+**Blocked by:** T1.
 **Files likely touched:** `src/server/usage.ts`
 **Out of scope:** real enforcement (T6).
 
@@ -94,7 +94,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** Free: 5 posts, 8,000 characters. Creator: unlimited posts, 80,000 characters. 60 LLM calls/hour on every plan.
-**Dependencies:** T2, T4, T5.
+**Blocked by:** T2, T4, T5.
 **Files likely touched:** `src/server/usage.ts`, `src/server/usage.test.ts`
 **Out of scope:** usage meters UI, upgrade prompts, Stripe.
 
@@ -110,7 +110,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** Free 30 days and last 3 versions. Creator 12 months and every version.
-**Dependencies:** T2, T4.
+**Blocked by:** T2, T4.
 **Files likely touched:** `src/server/visibility.ts`, `src/server/visibility.test.ts`
 **Out of scope:** the locked teaser card UI and the dashboard queries that use these helpers.
 
@@ -126,7 +126,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none here. Callers use `checkAndConsume` before calling.
-**Dependencies:** T1 (env setup), an Anthropic API key (human task).
+**Blocked by:** T1 (env setup), H3 Anthropic API key.
 **Files likely touched:** `src/server/llm.ts`, `src/server/llm.test.ts`, `.env.example`
 **Out of scope:** prompts per persona, the reaction and Tone read UI, caching in `reactions` and `tone_reads` (Step 8).
 
