@@ -27,7 +27,7 @@ export async function withBuffer<T>(
       return await fn(refreshedToken)
     } catch (error) {
       if (!(error instanceof BufferAuthError)) throw error
-      await db.transaction(async (tx) => {
+      const expired = await db.transaction(async (tx) => {
         const [connection] = await tx
           .select()
           .from(bufferConnections)
@@ -40,8 +40,11 @@ export async function withBuffer<T>(
           await tx
             .delete(bufferConnections)
             .where(eq(bufferConnections.userId, userId))
+          return true
         }
+        return !connection
       })
+      if (!expired) throw error
       throw new BufferAuthExpiredError()
     }
   } catch (error) {

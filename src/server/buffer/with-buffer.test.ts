@@ -26,7 +26,8 @@ vi.mock('~/db/client', () => ({
 const clearSession = vi.fn()
 vi.mock('~/server/auth/session', () => ({ clearSession }))
 const { encryptToken } = await import('~/server/auth/crypto')
-const { bufferRequest, BufferTemporaryError } = await import('./client')
+const { bufferRequest, BufferTemporaryError, BufferAuthError } =
+  await import('./client')
 const { withBuffer } = await import('./with-buffer')
 afterAll(() => sql.end())
 
@@ -133,9 +134,8 @@ it('preserves a connection replaced while the retry is in flight', async () => {
       return new HttpResponse(null, { status: 401 })
     }),
   )
-  await expect(withBuffer(id, request)).rejects.toMatchObject({
-    code: 'BUFFER_AUTH_EXPIRED',
-  })
+  await expect(withBuffer(id, request)).rejects.toBeInstanceOf(BufferAuthError)
+  expect(clearSession).not.toHaveBeenCalled()
   expect(
     await testDb
       .select()
