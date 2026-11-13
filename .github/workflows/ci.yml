@@ -108,6 +108,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # Pinned: @netlify/edge-functions-dev runs `deno eval --allow-scripts`, which newer
+      # Deno releases reject. 2.6.0 is the newest version verified to accept it.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.6.0
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run db:migrate
