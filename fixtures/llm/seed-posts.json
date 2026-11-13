@@ -1,0 +1,107 @@
+{
+  "linkedin": {
+    "reactions": {
+      "The Skeptic": {
+        "reaction": "\"Humbled and honored\" right before a parenthetical about awards? Pick one. And the synergy line says nothing I could repeat to a colleague.",
+        "sentiment": "negative"
+      },
+      "The Scroller": {
+        "reaction": "Stopped at the award brag. Didn't care about the quarter yet. Scrolled on.",
+        "sentiment": "negative"
+      },
+      "The Fan": {
+        "reaction": "The 'write things down' point is gold, and I'd share it. Congrats on the quarter!",
+        "sentiment": "positive"
+      }
+    },
+    "toneRead": {
+      "label": "Braggy",
+      "summary": "The opening leans on awards and humility at once, and the synergy sentence is too abstract to follow."
+    },
+    "channel_service": "linkedin"
+  },
+  "x": {
+    "reactions": {
+      "The Skeptic": {
+        "reaction": "9 steps to 3 and tickets halved. Numbers I can check. I'll allow it.",
+        "sentiment": "positive"
+      },
+      "The Scroller": {
+        "reaction": "Clear in one line: onboarding got shorter. Kept reading.",
+        "sentiment": "positive"
+      },
+      "The Fan": {
+        "reaction": "Love a win with real numbers. Sharing this with my team.",
+        "sentiment": "positive"
+      }
+    },
+    "toneRead": {
+      "label": "Confident",
+      "summary": "Plain, specific and proud without bragging."
+    },
+    "channel_service": "twitter"
+  },
+  "draft": {
+    "reactions": {
+      "The Skeptic": {
+        "reaction": "Everyone says 'real ownership'. Tell me what they will actually own.",
+        "sentiment": "neutral"
+      },
+      "The Scroller": {
+        "reaction": "The six-button line hooked me. I'd read the rest.",
+        "sentiment": "positive"
+      },
+      "The Fan": {
+        "reaction": "This sounds like a team I'd want to work with. Sending it to a designer friend.",
+        "sentiment": "positive"
+      }
+    },
+    "toneRead": {
+      "label": "Warm",
+      "summary": "Friendly and specific, with a light hook, though the perks are generic."
+    },
+    "channel_service": "linkedin"
+  },
+  "old-45d": {
+    "reactions": {
+      "The Skeptic": {
+        "reaction": "Finally someone says it. Mildly smug, but correct.",
+        "sentiment": "neutral"
+      },
+      "The Scroller": {
+        "reaction": "Short and punchy. Stopped scrolling for it.",
+        "sentiment": "positive"
+      },
+      "The Fan": {
+        "reaction": "Saving this for my next standup.",
+        "sentiment": "positive"
+      }
+    },
+    "toneRead": {
+      "label": "Helpful",
+      "summary": "Direct advice with a clear action, slightly preachy in the first line."
+    },
+    "channel_service": "linkedin"
+  },
+  "old-13mo": {
+    "reactions": {
+      "The Skeptic": {
+        "reaction": "What was the failure? Without it this is just a vague redemption arc.",
+        "sentiment": "negative"
+      },
+      "The Scroller": {
+        "reaction": "Intriguing opening, but nothing concrete. Moved on.",
+        "sentiment": "neutral"
+      },
+      "The Fan": {
+        "reaction": "Love the reframe. Wish I knew the story!",
+        "sentiment": "positive"
+      }
+    },
+    "toneRead": {
+      "label": "Vague",
+      "summary": "A nice reframe, but it never says what failed or what changed."
+    },
+    "channel_service": "linkedin"
+  }
+}
