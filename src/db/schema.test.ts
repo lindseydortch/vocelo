@@ -68,6 +68,7 @@ describe('db schema', () => {
       'tts_chars',
       'post_review',
       'llm_call',
+      'buffer_write',
     ])
     expect(schema.sentiment.enumValues).toEqual([
       'positive',
@@ -78,6 +79,9 @@ describe('db schema', () => {
       'draft',
       'scheduled',
       'sent',
+      'needs_approval',
+      'sending',
+      'error',
     ])
   })
 })
@@ -119,6 +123,19 @@ describe('sign-in schema additions (#58)', () => {
   it('ships both columns in the migrations, with no drops or renames', () => {
     expect(migrationSql).toContain('"timezone" text')
     expect(migrationSql).toMatch(/"buffer_organization_id" text/)
+    expect(migrationSql).not.toMatch(/DROP COLUMN|RENAME/i)
+  })
+})
+
+describe('Buffer integration schema additions (#59)', () => {
+  it('adds the enum values and columns additively', () => {
+    for (const v of ['needs_approval', 'sending', 'error', 'buffer_write'])
+      expect(migrationSql).toContain(`ADD VALUE '${v}'`)
+    expect(migrationSql).toContain('"channels_cache" jsonb')
+    expect(migrationSql).toContain(
+      '"channels_cached_at" timestamp with time zone',
+    )
+    expect(migrationSql).toContain('CONSTRAINT "posts_channel_required" CHECK')
     expect(migrationSql).not.toMatch(/DROP COLUMN|RENAME/i)
   })
 })

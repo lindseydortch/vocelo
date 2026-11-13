@@ -1,7 +1,10 @@
+import { sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -14,6 +17,7 @@ export const usageKind = pgEnum('usage_kind', [
   'tts_chars',
   'post_review',
   'llm_call',
+  'buffer_write',
 ])
 export const sentiment = pgEnum('sentiment', [
   'positive',
@@ -24,6 +28,9 @@ export const bufferStatus = pgEnum('buffer_status', [
   'draft',
   'scheduled',
   'sent',
+  'needs_approval',
+  'sending',
+  'error',
 ])
 
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow()
@@ -36,6 +43,8 @@ export const users = pgTable(
     email: text(),
     bufferOrganizationId: text().notNull(),
     timezone: text(),
+    channelsCache: jsonb(),
+    channelsCachedAt: timestamp({ withTimezone: true }),
     plan: text().notNull().default('free'),
     stripeCustomerId: text(),
     stripeSubscriptionId: text(),
@@ -74,7 +83,8 @@ export const posts = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     bufferOrganizationId: text().notNull(),
-    channelId: text().notNull(),
+    // null only for the sample post, which has no Buffer channel (see posts_channel_required)
+    channelId: text(),
     channelService: text().notNull(),
     channelName: text().notNull(),
     bufferPostId: text(),
@@ -88,6 +98,10 @@ export const posts = pgTable(
   (t) => [
     unique('posts_user_buffer_post_unique').on(t.userId, t.bufferPostId),
     index('posts_user_last_edited_idx').on(t.userId, t.lastEditedAt),
+    check(
+      'posts_channel_required',
+      sql`${t.isSample} OR ${t.channelId} IS NOT NULL`,
+    ),
   ],
 )
 

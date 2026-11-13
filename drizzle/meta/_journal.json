@@ -8,6 +8,13 @@
       "when": 1794586901132,
       "tag": "0000_flashy_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794597700144,
+      "tag": "0001_nappy_warpath",
+      "breakpoints": true
     }
   ]
 }
