@@ -1,0 +1,14 @@
+{
+  "workbench.colorCustomizations": {
+    "titleBar.activeForeground": "#ffffff",
+    "titleBar.inactiveForeground": "#ffffffCC",
+    "titleBar.activeBackground": "#957d86",
+    "titleBar.inactiveBackground": "#957d86CC"
+  },
+  "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
+  "prettier.semi": false,
+  "prettier.singleQuote": true,
+  "editor.formatOnSaveMode": "modifications",
+  "yaml.format.singleQuote": true,
+  "html.completion.attributeDefaultValue": "singlequotes"
+}
