@@ -13,6 +13,15 @@ function run(env: Record<string, string>) {
 }
 
 describe('checkBuildEnv', () => {
+  it.each(['personal-secret', ''])(
+    'rejects a set BUFFER_API_KEY (%s)',
+    (key) => {
+      const error = checkBuildEnv({ BUFFER_API_KEY: key })
+      expect(error).toMatch(/BUFFER_API_KEY/)
+      if (key) expect(error).not.toContain(key)
+    },
+  )
+
   it('returns an error when E2E_AUTH is set', () => {
     expect(checkBuildEnv({ E2E_AUTH: '1' })).toMatch(/E2E_AUTH/)
   })
@@ -27,6 +36,13 @@ describe('checkBuildEnv', () => {
 })
 
 describe('check-build-env script', () => {
+  it('exits 1 when BUFFER_API_KEY is set without printing its value', () => {
+    const result = run({ BUFFER_API_KEY: 'personal-secret' })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toMatch(/BUFFER_API_KEY/)
+    expect(result.stderr).not.toContain('personal-secret')
+  })
+
   it('exits 1 when E2E_AUTH is set', () => {
     const result = run({ E2E_AUTH: '1' })
     expect(result.status).toBe(1)

@@ -6,8 +6,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
-    "dev:ticket": "set -a && . ./.ticket.env && set +a && vite dev --port $PORT",
+    "dev": "node --env-file-if-exists=.env.local ./node_modules/vite/bin/vite.js dev --port 3000",
+    "dev:ticket": "set -a && . ./.ticket.env && set +a && node --env-file-if-exists=.env.local ./node_modules/vite/bin/vite.js dev --port $PORT",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

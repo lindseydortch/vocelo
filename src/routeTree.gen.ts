@@ -15,6 +15,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as Char91__devChar93LoginRouteImport } from './routes/[__dev].login'
 import { Route as Char91__testChar93ErrorRouteImport } from './routes/[__test].error'
 import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
 import { Route as AppIndexRouteImport } from './routes/app/index'
@@ -53,6 +54,11 @@ const SigninRoute = SigninRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91__devChar93LoginRoute = Char91__devChar93LoginRouteImport.update({
+  id: '/__dev/login',
+  path: '/__dev/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91__testChar93ErrorRoute = Char91__testChar93ErrorRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
+  '/__dev/login': typeof Char91__devChar93LoginRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/auth/error': typeof AuthErrorRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
+  '/__dev/login': typeof Char91__devChar93LoginRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/auth/error': typeof AuthErrorRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/signin': typeof SigninRoute
   '/terms': typeof TermsRoute
+  '/__dev/login': typeof Char91__devChar93LoginRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/auth/error': typeof AuthErrorRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signin'
     | '/terms'
+    | '/__dev/login'
     | '/__test/error'
     | '/__test/login'
     | '/auth/error'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signin'
     | '/terms'
+    | '/__dev/login'
     | '/__test/error'
     | '/__test/login'
     | '/auth/error'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signin'
     | '/terms'
+    | '/__dev/login'
     | '/__test/error'
     | '/__test/login'
     | '/auth/error'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SigninRoute: typeof SigninRoute
   TermsRoute: typeof TermsRoute
+  Char91__devChar93LoginRoute: typeof Char91__devChar93LoginRoute
   Char91__testChar93ErrorRoute: typeof Char91__testChar93ErrorRoute
   Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
   AuthErrorRoute: typeof AuthErrorRoute
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/__dev/login': {
+      id: '/__dev/login'
+      path: '/__dev/login'
+      fullPath: '/__dev/login'
+      preLoaderRoute: typeof Char91__devChar93LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/__test/error': {
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SigninRoute: SigninRoute,
   TermsRoute: TermsRoute,
+  Char91__devChar93LoginRoute: Char91__devChar93LoginRoute,
   Char91__testChar93ErrorRoute: Char91__testChar93ErrorRoute,
   Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
   AuthErrorRoute: AuthErrorRoute,
