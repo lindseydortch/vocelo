@@ -14,6 +14,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
+import { Route as AuthBufferStartRouteImport } from './routes/auth/buffer/start'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const Char91__testChar93LoginRoute = Char91__testChar93LoginRouteImport.update({
   path: '/__test/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthBufferStartRoute = AuthBufferStartRouteImport.update({
+  id: '/auth/buffer/start',
+  path: '/auth/buffer/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pricing' | '/privacy' | '/terms' | '/__test/login'
+  fullPaths:
+    | '/'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/__test/login'
+    | '/auth/buffer/start'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pricing' | '/privacy' | '/terms' | '/__test/login'
-  id: '__root__' | '/' | '/pricing' | '/privacy' | '/terms' | '/__test/login'
+  to:
+    | '/'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/__test/login'
+    | '/auth/buffer/start'
+  id:
+    | '__root__'
+    | '/'
+    | '/pricing'
+    | '/privacy'
+    | '/terms'
+    | '/__test/login'
+    | '/auth/buffer/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
+  AuthBufferStartRoute: typeof AuthBufferStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91__testChar93LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/buffer/start': {
+      id: '/auth/buffer/start'
+      path: '/auth/buffer/start'
+      fullPath: '/auth/buffer/start'
+      preLoaderRoute: typeof AuthBufferStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
+  AuthBufferStartRoute: AuthBufferStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
