@@ -24,7 +24,12 @@ export type TaggedChannel = BufferChannel & { status: ChannelStatus }
 
 export type ChannelList = { channels: TaggedChannel[]; stale: boolean }
 
-function tag(channel: BufferChannel): TaggedChannel {
+const toList = (channels: BufferChannel[], stale: boolean): ChannelList => ({
+  channels: channels.map(tagChannel),
+  stale,
+})
+
+function tagChannel(channel: BufferChannel): TaggedChannel {
   const status: ChannelStatus = !SUPPORTED_SERVICES.includes(channel.service)
     ? 'unsupported'
     : channel.isDisconnected || channel.isLocked
@@ -57,7 +62,7 @@ export async function getChannels(
     cachedAt &&
     now().getTime() - cachedAt.getTime() < CHANNELS_CACHE_TTL_MS
   ) {
-    return { channels: cached.map(tag), stale: false }
+    return toList(cached, false)
   }
 
   try {
@@ -68,10 +73,10 @@ export async function getChannels(
       .update(users)
       .set({ channelsCache: fresh, channelsCachedAt: now() })
       .where(eq(users.id, userId))
-    return { channels: fresh.map(tag), stale: false }
+    return toList(fresh, false)
   } catch (error) {
     if (error instanceof BufferTemporaryError && cached) {
-      return { channels: cached.map(tag), stale: true }
+      return toList(cached, true)
     }
     throw error
   }

@@ -225,3 +225,18 @@ describe('getChannels for a missing user', () => {
     ).rejects.toThrow(/user/i)
   })
 })
+
+describe('getChannels with a malformed cache', () => {
+  it('ignores a non-array cache and fetches', async () => {
+    setClock(() => T0)
+    const user = await createTestUser()
+    await db
+      .update(users)
+      .set({ channelsCache: { oops: true }, channelsCachedAt: T0 })
+      .where(eq(users.id, user.id))
+    const calls = mockBuffer([channel('a')])
+    const result = await getChannels(user.id)
+    expect(calls.count).toBe(1)
+    expect(result.channels.map((c) => c.id)).toEqual(['a'])
+  })
+})
