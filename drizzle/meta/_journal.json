@@ -15,6 +15,13 @@
       "when": 1794597700144,
       "tag": "0001_nappy_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794603727933,
+      "tag": "0002_standard_personas",
+      "breakpoints": true
     }
   ]
 }
