@@ -18,6 +18,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as Char91__testChar93ErrorRouteImport } from './routes/[__test].error'
 import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppBillingCanceledRouteImport } from './routes/app/billing/canceled'
 import { Route as AuthBufferStartRouteImport } from './routes/auth/buffer/start'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppBillingCanceledRoute = AppBillingCanceledRouteImport.update({
+  id: '/billing/canceled',
+  path: '/billing/canceled',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AuthBufferStartRoute = AuthBufferStartRouteImport.update({
   id: '/auth/buffer/start',
   path: '/auth/buffer/start',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/app/': typeof AppIndexRoute
+  '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/app': typeof AppIndexRoute
+  '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRoutesById {
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
   '/app/': typeof AppIndexRoute
+  '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/__test/error'
     | '/__test/login'
     | '/app/'
+    | '/app/billing/canceled'
     | '/auth/buffer/start'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/__test/error'
     | '/__test/login'
     | '/app'
+    | '/app/billing/canceled'
     | '/auth/buffer/start'
   id:
     | '__root__'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/__test/error'
     | '/__test/login'
     | '/app/'
+    | '/app/billing/canceled'
     | '/auth/buffer/start'
   fileRoutesById: FileRoutesById
 }
@@ -222,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/billing/canceled': {
+      id: '/app/billing/canceled'
+      path: '/billing/canceled'
+      fullPath: '/app/billing/canceled'
+      preLoaderRoute: typeof AppBillingCanceledRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/auth/buffer/start': {
       id: '/auth/buffer/start'
       path: '/auth/buffer/start'
@@ -234,10 +253,12 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
+  AppBillingCanceledRoute: typeof AppBillingCanceledRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
+  AppBillingCanceledRoute: AppBillingCanceledRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
