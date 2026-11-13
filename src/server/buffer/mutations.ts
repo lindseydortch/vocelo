@@ -23,7 +23,7 @@ export class BufferUnknownMutationResultError extends Error {
 
 export type BufferWriteResult = { id: string; status: BufferStatus }
 
-type Payload = {
+type MutationPayload = {
   __typename?: string
   message?: string
   post?: { id: string; status: string }
@@ -33,7 +33,7 @@ const RESULT_FIELDS = `__typename
   ... on PostActionSuccess { post { id status } }
   ... on MutationError { message }`
 
-function unwrap(payload: Payload | undefined): BufferWriteResult {
+function unwrap(payload: MutationPayload | undefined): BufferWriteResult {
   if (payload?.post) {
     return { id: payload.post.id, status: mapStatus(payload.post.status) }
   }
@@ -52,7 +52,7 @@ export async function createDraft(
   channelId: string,
   text: string,
 ): Promise<BufferWriteResult> {
-  const data = await bufferRequest<{ createPost?: Payload }>({
+  const data = await bufferRequest<{ createPost?: MutationPayload }>({
     accessToken,
     query: `mutation CreateDraft($input: CreatePostInput!) {
   createPost(input: $input) {
@@ -83,7 +83,7 @@ export async function editDraftText(
   postId: string,
   text: string,
 ): Promise<BufferWriteResult> {
-  const data = await bufferRequest<{ editPost?: Payload }>({
+  const data = await bufferRequest<{ editPost?: MutationPayload }>({
     accessToken,
     query: `mutation EditDraftText($input: EditPostInput!) {
   editPost(input: $input) {
