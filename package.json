@@ -31,6 +31,7 @@
     "postgres": "^4.1.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "stripe": "^23.1.0",
     "twitter-text": "^3.1.0",
     "zod": "^4.6.7"
   },
