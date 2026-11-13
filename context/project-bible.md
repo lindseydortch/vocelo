@@ -41,7 +41,7 @@ Output of grilling Step 0. Sections below are already updated to match.
 ### Product rules
 - **One Vocelo post = one channel = one Buffer draft.**
 - **Vocelo overwrites the Buffer draft's text on save** (last write wins). Importing a Buffer draft copies it into Vocelo once.
-- **Images added in Buffer are preserved:** before `editPost`, read the draft's current assets and send them back unchanged. Drafts with images show "📎 N images, edit them in Buffer."
+- **Images added in Buffer are preserved:** `editPost` sends only `id` + `text`; omitted assets are kept by Buffer (Step 4). Drafts with attachments show "📎 N attachments, edit them in Buffer."
 - **"Reviewed post"** = a post counts once per usage period, the **first time it triggers anything that costs money** (new TTS audio, incl. highlight-to-hear; a reaction; a Tone read). Cached replays, imports, and the sample post never count. *(Updated in Step 1.)*
 - **Usage period** (all counters reset together):
   - Free: monthly on the signup anniversary day (signup on the 31st → resets on the last day of shorter months)
@@ -105,7 +105,7 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 - ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
 - ~~Step 3 (sign-in)~~ ✅ answered; see "Step 3 Decisions" below
 - **Step 5 (billing):** Stripe webhook idempotency; success page loading before the webhook lands; atomic check-then-consume on usage counters
-- **Step 9 (scheduling):** timezone for `dueAt` (Step 3 stores Buffer's `account.timezone` in `users.timezone`; Step 9 decides how to use it)
+- **Step 9 (scheduling):** reuse Step 4's pre-save check + `saveDraft`; what Approve & schedule does when Buffer's queue is full (`LimitReachedError`, Buffer Free = 10 scheduled per channel); timezone for `dueAt` (Step 3 stores Buffer's `account.timezone` in `users.timezone`; Step 9 decides how to use it)
 - **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
 
 ---
@@ -291,6 +291,65 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 
 ---
 
+## Step 4 Decisions: Buffer integration (agreed 2026-11-12)
+
+### Buffer facts (developers.buffer.com, checked 2026-11-12)
+- `channels(input: { organizationId, filter? })` → `id name displayName service type timezone isDisconnected isLocked metadata …`. `channel(input: { id })` fetches one. `service` enum includes `linkedin twitter substack threads bluesky mastodon` (Substack added Sept 2026; Notes only, 10,000 chars). Mastodon channels expose `metadata.maxCharacters`.
+- `posts(first, after, input: { organizationId, filter: { status, channelIds, … }, sort })`: forward-only Relay paging; max `first` undocumented (docs suggest 20–50). `post(input: { id })` fetches one.
+- **`PostStatus`: `draft`, `needs_approval`, `scheduled`, `sending`, `sent`, `error`.** Failed posts carry `error { message }`.
+- `createPost` **requires** `channelId`, `assets` (`[]` for none), `mode`, `schedulingType`, `needsApproval`, even with `saveToDraft: true`. Drafts skip Buffer's posting limits (Buffer Free: 10 scheduled posts per channel).
+- **`editPost` only changes what you send:** omit `text` / `assets` / `metadata` / `mode` → kept as is. (So we never need to read and resend assets.) `saveToDraft: true` moves a scheduled post back to draft.
+- Mutations return a union; every error implements `MutationError { message }` with HTTP 200 (e.g. `"LinkedIn posts cannot exceed 3000 characters."`). Buffer validates length server-side.
+- `deletePost` exists (unused in MVP). **No webhooks**: status is only known by fetching.
+- OAuth client limits: 100 + 10/user per 15 min, **500 + 25/user per 24 h**, 15,000 + 100/user per 30 days. Query complexity cap 175,000 points.
+- Character counting: UTF-16 code units by default (emoji = 2); LinkedIn counts every URL as 24; X uses its weighted count (Premium allows 25,000, not detectable via API); Bluesky counts graphemes (300); Mastodon is per server (default 500).
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Scope | Step 4 = channels, character counting, save draft (create/edit), status sync, import. **Approve & schedule is Step 9** and reuses Step 4's save + post-fetch functions. Ideas, images, threads, link cards stay stretch. |
+| When a Buffer draft exists | Only after an explicit **"Save draft"** click. A Vocelo post can live without `buffer_post_id`. No autosave to Buffer. |
+| New post | `/app/posts/new` requires a channel **before** the post row is created. The channel can change until the first successful save, then locks. Over-limit text stays and blocks saving. |
+| Supported channels | `linkedin`, `twitter`, `substack`, `threads`, `bluesky`, `mastodon`. Unsupported services show **disabled** ("Not supported yet"). `isDisconnected` / `isLocked` channels show disabled ("Reconnect this channel in Buffer"). Zero supported channels → empty state with "Refresh channels". |
+| Channel cache | `users.channels_cache` (jsonb) + `users.channels_cached_at`, **10-min TTL**; "Refresh channels" bypasses it. Scoped to the user's org. The import list is never cached. |
+| Character counting | One shared `src/lib/char-count.ts`: `countFor(service, text, { maxCharacters? })` → `{ count, limit, over }`. X via `twitter-text` (limit **280 always**; long X posts are stretch), Bluesky via `Intl.Segmenter` graphemes (300), LinkedIn URLs = 24 (3,000), Threads 500, Substack 10,000, Mastodon `maxCharacters` ?? 500, else UTF-16. Composer renders it; **the server re-checks on save**. Buffer's own error is the backstop. |
+| Statuses | `buffer_status` enum gains `needs_approval`, `sending`, `error`. **Saving is allowed only when status is `draft`**; every other status blocks with "Save as a new draft" (for `error`, Buffer's `error.message` is shown). |
+| Status sync | No webhooks, no bulk polling. Fetch the one post **when the composer opens** and **right before every save**; store `buffer_status` + `due_at`. Dashboard shows the last known status (can be stale). |
+| Pre-save check | One call: `post(id) { status error channel { isDisconnected isLocked } }`. Not found → recreate. No `buffer_post_id` yet → `channel(id)` instead. A save costs 2 Buffer calls. |
+| Create | `createPost { channelId, text, saveToDraft: true, mode: addToQueue, schedulingType: automatic, needsApproval: false, assets: [] }`. No metadata, tags, or source. |
+| Edit | `editPost { id, text }` only. Images, attachments and metadata added in Buffer survive because they're omitted. |
+| Concurrency | Save locks the post row (`FOR UPDATE`); once `buffer_post_id` is set it uses `editPost`. Save button disabled while saving. If `createPost` succeeds but our response is lost, the orphan duplicate draft in Buffer is accepted. |
+| Deleted in Buffer | On save: create a new draft, repoint `buffer_post_id`, "Recreated in Buffer." |
+| "Save as a new draft" | For `needs_approval` / `scheduled` / `sending` / `sent` / `error`: `createPost` on the same channel and **repoint the same Vocelo post** (versions + reactions kept). The old Buffer post is left alone and untracked. |
+| Versions | The save inserts the version row **in the same transaction** as storing the result, only when text changed. Step 9 builds the panel + restore. |
+| Unchanged text | Text equals the latest version and status is `draft` → skip Buffer, "Already saved." (A draft deleted in Buffer goes unnoticed until the next change or composer open.) |
+| Save failures | Temporary / 429 → text stays unsaved, "Buffer isn't responding. Try again in a minute." (+ seconds from `retry-after`), no version, no auto-retry. `MutationError` → Buffer's message verbatim. `BUFFER_AUTH_EXPIRED` → Step 3/6 reconnect dialog. |
+| Composer open, Buffer down | Opens with last known status + "Couldn't check Buffer just now." Read-aloud, reactions, Tone read keep working. |
+| Disconnected/locked channel | Text stays editable; read-aloud + reactions work; only "Save draft" is disabled ("Reconnect this channel in Buffer, then reopen"). |
+| Import list | `posts` with status `draft`, user's org, supported + connected channels, newest first, `first: 20`, no "Load more" (stretch). Hidden: already imported (incl. locked ones), empty text, thread metadata. Count line: "N drafts can't be imported (threads or empty)". Drafts with attachments show "📎 N attachments, edit them in Buffer". |
+| Import action | Uses the list's data (no extra Buffer call). Sets `created_at` + `last_edited_at` to **import time** (so old drafts don't land locked) and creates **version 1** from the Buffer text (the only non-save version). Free, never a review. |
+| Multi-org drift | Posts whose org/channel is no longer found show "Channel no longer connected" (read-only save). Org switching stays stretch. |
+| Plans | **Buffer actions behave the same on every tier** and never count as a review. Locked posts can't be opened, so can't be saved. Safety cap: **30 Buffer writes / hour / user** (one per save or import action, `usage_events.kind = buffer_write`): "You've saved a lot this hour. Try again in N minutes." |
+
+### Schema additions (additive migration)
+- `buffer_status` enum: add `needs_approval`, `sending`, `error`
+- `usage_events.kind` enum: add `buffer_write`
+- `users.channels_cache` (jsonb, nullable), `users.channels_cached_at` (timestamptz, nullable)
+- `posts.channel_id` becomes nullable, with check `is_sample OR channel_id IS NOT NULL` (relaxing NOT NULL is not a drop; allowed). The sample post uses `channel_service = 'linkedin'`.
+
+### Conflicts flagged
+- **Kickoff rule fixed:** "read the draft's current assets and send them back" was wrong; `editPost` keeps omitted assets.
+- **Composer (Step 6):** character counting moved to Step 4 (`src/lib/char-count.ts`); Composer renders it. Composer owns the editor route the Save button lives in.
+- **Versions (Step 9):** version rows are written by Step 4's save (and import). Step 9 = history panel, restore, Approve & schedule (`editPost` with `mode` + `dueAt`, reusing the pre-save check).
+- **Usage (Step 1 T6):** new `buffer_write` kind + hourly cap lives beside the LLM cap.
+- **Pages (Step 10):** dashboard rows show status badges; import list + empty states live on `/app`.
+- **Seed (Step 2 I12):** the imported draft with 2 images needs `buffer_status = draft` and a version 1.
+
+### Tickets
+Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
+
+---
+
 ## MVP
 
 ### 1. Infrastructure
@@ -381,8 +440,8 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 | Area | Must cover |
 |---|---|
 | Sign-in | State mismatch rejected; `returnTo` allowlist; each `/auth/error` reason; missing scopes rejected; PKCE exchange; upsert by `buffer_account_id` (concurrent callbacks → one user); refresh rotation with the DB lock (two concurrent refreshes → one Buffer call); dead token ends session, temporary error doesn't; 401 and `UNAUTHORIZED` both retry once; sign out vs. disconnect; `/__dev/login` 404s in production |
-| Buffer drafts | Create; overwrite text while **preserving existing assets**; draft deleted in Buffer → recreated; draft scheduled/sent → blocked; channel disconnected → saving disabled; import once (unique constraint); unsupported channels hidden |
-| Character limits | At the limit, over by 1, per channel; over-limit import blocks saving |
+| Buffer drafts | Create; `editPost` sends only `id` + `text` (assets never sent); double-save → one Buffer draft; draft deleted in Buffer → recreated; not `draft` → blocked + "Save as a new draft"; channel disconnected/locked → saving disabled; unchanged text skips Buffer; version written only on changed-text save; `MutationError` message shown; import once (unique constraint), sets import time + version 1; unsupported channels disabled; 31st Buffer write in an hour rejected |
+| Character limits | At the limit, over by 1, per channel; X weighted count, LinkedIn URL = 24, Bluesky graphemes, emoji = 2 UTF-16, Mastodon `maxCharacters`; server re-checks on save; over-limit import blocks saving |
 | Usage + plans | Check-then-consume is atomic (concurrent requests can't overspend); refund on provider failure; "too big for what's left" blocks with no partial read; cached replays, imports, and the sample post never count; first billable action counts the post once per period; Free vs. Creator limits; effective plan for `active` / `trialing` / `past_due` / canceled |
 | Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
 | History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
@@ -448,17 +507,21 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 - [ ] Stripe test mode for demo (card `4242 4242 4242 4242`)
 
 ### 4. Buffer Integration
-- [ ] List channels + channel picker, **filtered to supported text-first channels** (hide unsupported channels, or show them disabled with "Not supported yet")
+Full rules: "Step 4 Decisions".
+- [ ] List channels (10-min DB cache + Refresh) + channel picker: supported text-first channels selectable; unsupported, disconnected, and locked channels shown disabled
+- [ ] Per-channel character counting (`src/lib/char-count.ts`), re-checked server-side on save
 - [ ] One Vocelo post = one channel = one Buffer draft
-- [ ] Create draft — `createPost` with `saveToDraft: true`
-- [ ] Load existing drafts — `posts` query (import copies the draft into Vocelo once)
-- [ ] Update draft on save — `editPost` overwrites the **text** (Vocelo wins)
-  - Read the draft's current assets first and send them back unchanged, so images added in Buffer survive
-  - Drafts with images show "📎 N images, edit them in Buffer"
+- [ ] Create draft — `createPost` with `saveToDraft: true` (first explicit "Save draft")
+- [ ] Update draft on save — `editPost` with `id` + `text` only (Vocelo wins; omitted assets survive in Buffer)
+  - Pre-save check: deleted → recreate; not `draft` → blocked, "Save as a new draft"; channel disconnected → blocked
+  - Drafts with attachments show "📎 N attachments, edit them in Buffer"
+- [ ] Status sync on composer open (no webhooks); dashboard status badges
+- [ ] Import existing drafts — `posts` query (copies the draft into Vocelo once, creates version 1)
+- [ ] 30 Buffer writes / hour / user safety cap
 
 ### 5. Composer
 - [ ] Text editor with selection tracking
-- [ ] **Per-channel character limits** (X: 280, etc.) with a live count; block saving to a channel when over its limit
+- [ ] **Per-channel character limits** (X: 280, etc.) with a live count; block saving to a channel when over its limit. Counting comes from Step 4's `src/lib/char-count.ts`; the Composer only renders it
 - [ ] "Feeling stuck?" hint: suggest speaking the post with Wispr Flow or OS dictation, then pasting it in (no built-in voice-to-text in MVP)
 
 ### 6. Personas
