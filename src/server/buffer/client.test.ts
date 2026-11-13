@@ -173,4 +173,50 @@ describe('bufferRequest', () => {
     await call()
     expect(warn).not.toHaveBeenCalled()
   })
+
+  it('keeps retryAfter from a 5xx response', async () => {
+    server.use(
+      http.post(
+        BUFFER_GRAPHQL_URL,
+        () =>
+          new HttpResponse(null, {
+            status: 503,
+            headers: { 'retry-after': '5' },
+          }),
+      ),
+    )
+    const err = (await call().catch((e: unknown) => e)) as BufferTemporaryError
+    expect(err.retryAfter).toBe(5)
+  })
+
+  it('reads an HTTP-date retry-after', async () => {
+    const date = new Date(Date.now() + 30_000).toUTCString()
+    server.use(
+      http.post(
+        BUFFER_GRAPHQL_URL,
+        () =>
+          new HttpResponse(null, {
+            status: 429,
+            headers: { 'retry-after': date },
+          }),
+      ),
+    )
+    const err = (await call().catch((e: unknown) => e)) as BufferTemporaryError
+    expect(err.retryAfter).toBeGreaterThan(20)
+    expect(err.retryAfter).toBeLessThanOrEqual(30)
+  })
+
+  it('warns from the RateLimit-Remaining header and generates a request ID when none is sent', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    server.use(
+      http.post(BUFFER_GRAPHQL_URL, () =>
+        HttpResponse.json(
+          { data: { account: { id: 'a' } } },
+          { headers: { 'ratelimit-remaining': '2' } },
+        ),
+      ),
+    )
+    await call()
+    expect(String(warn.mock.calls[0]![0])).toMatch(/request [0-9a-f-]{36}\)/)
+  })
 })

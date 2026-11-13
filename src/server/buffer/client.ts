@@ -104,7 +104,10 @@ export async function bufferRequest<T = unknown>({
     )
   }
   if (res.status >= 500) {
-    throw new BufferTemporaryError(`Buffer returned HTTP ${res.status}`)
+    throw new BufferTemporaryError(
+      `Buffer returned HTTP ${res.status}`,
+      parseRetryAfter(res.headers.get('retry-after')),
+    )
   }
 
   let body: GraphQLResponse<T>
