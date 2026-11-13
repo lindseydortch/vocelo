@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { db } from '~/db/client'
 import { posts, usageEvents, users } from '~/db/schema'
 import { now } from '~/lib/clock'
@@ -148,5 +148,75 @@ export async function refund(eventId: string): Promise<void> {
         eq(usageEvents.id, eventId),
         inArray(usageEvents.kind, ['tts_chars', 'llm_call']),
       ),
+    )
+}
+
+const BUFFER_WRITES_PER_HOUR = 30
+
+/** The user hit the hourly Buffer write cap. */
+export class BufferWriteCapError extends Error {
+  readonly code = 'BUFFER_WRITE_CAP'
+  constructor(readonly retryInMinutes: number) {
+    super(`Buffer write cap reached. Try again in ${retryInMinutes} minutes.`)
+    this.name = 'BufferWriteCapError'
+  }
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+/**
+ * Reserve one Buffer write (30 per rolling hour, every plan). Run it inside the
+ * caller's transaction: it locks the user row, counts `buffer_write` events in
+ * the last 60 minutes, and inserts one. Throws `BufferWriteCapError` (code
+ * `BUFFER_WRITE_CAP`, with `retryInMinutes`) when the cap is reached. Returns
+ * the event ID to pass to `refundBufferWrite` if Buffer fails. These events
+ * never count toward reviewed posts or voice characters.
+ */
+export async function consumeBufferWrite(
+  userId: string,
+  tx: Tx,
+): Promise<string> {
+  const [user] = await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .for('update')
+  if (!user) throw new Error('Usage user not found')
+
+  const at = now()
+  const recent = await tx
+    .select({ createdAt: usageEvents.createdAt })
+    .from(usageEvents)
+    .where(
+      and(
+        eq(usageEvents.userId, userId),
+        eq(usageEvents.kind, 'buffer_write'),
+        gt(usageEvents.createdAt, new Date(at.getTime() - HOUR_MS)),
+      ),
+    )
+    .orderBy(asc(usageEvents.createdAt))
+  const oldest = recent[0]
+  if (oldest && recent.length >= BUFFER_WRITES_PER_HOUR) {
+    const freesAt = oldest.createdAt.getTime() + HOUR_MS
+    throw new BufferWriteCapError(
+      Math.max(1, Math.ceil((freesAt - at.getTime()) / 60_000)),
+    )
+  }
+
+  const [event] = await tx
+    .insert(usageEvents)
+    .values({ userId, kind: 'buffer_write', amount: 1, createdAt: at })
+    .returning({ id: usageEvents.id })
+  if (!event) throw new Error('Usage event insert returned no row')
+  return event.id
+}
+
+/** Refund a Buffer write after Buffer fails. Unknown IDs are ignored. */
+export async function refundBufferWrite(eventId: string): Promise<void> {
+  if (!UUID_PATTERN.test(eventId)) return
+  await db
+    .delete(usageEvents)
+    .where(
+      and(eq(usageEvents.id, eventId), eq(usageEvents.kind, 'buffer_write')),
     )
 }

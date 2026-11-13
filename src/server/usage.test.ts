@@ -23,7 +23,13 @@ vi.mock('~/db/client', () => ({
     return testDb
   },
 }))
-const { checkAndConsume, refund } = await import('./usage')
+const {
+  checkAndConsume,
+  refund,
+  consumeBufferWrite,
+  refundBufferWrite,
+  BufferWriteCapError,
+} = await import('./usage')
 
 const NOW = new Date('2026-06-15T12:00:00.000Z')
 const HOUR = 3_600_000
@@ -44,7 +50,7 @@ async function events(userId: string) {
 }
 async function seed(
   userId: string,
-  kind: 'tts_chars' | 'post_review' | 'llm_call',
+  kind: 'tts_chars' | 'post_review' | 'llm_call' | 'buffer_write',
   amount: number,
   createdAt: Date,
   postId?: string,
@@ -381,5 +387,100 @@ describe('refund', () => {
     await expect(
       refund('00000000-0000-4000-8000-0000000000ff'),
     ).resolves.toBeUndefined()
+  })
+})
+
+describe('buffer write cap', () => {
+  const consume = (userId: string) =>
+    testDb.transaction((tx) => consumeBufferWrite(userId, tx))
+  const writes = async (userId: string) =>
+    (await events(userId)).filter((e) => e.kind === 'buffer_write')
+
+  for (const plan of ['free', 'creator'] as const) {
+    it(`allows 30 writes an hour and rejects the 31st on ${plan}`, async () => {
+      const user = await createTestUser({ plan })
+      for (let i = 0; i < 30; i++) await consume(user.id)
+
+      const error = await consume(user.id).catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(BufferWriteCapError)
+      expect(error).toMatchObject({ code: 'BUFFER_WRITE_CAP' })
+      expect(await writes(user.id)).toHaveLength(30)
+    })
+  }
+
+  it('reports minutes until the oldest write leaves the window', async () => {
+    const user = await freeUser()
+    await seed(
+      user.id,
+      'buffer_write',
+      1,
+      new Date(NOW.getTime() - 50 * 60_000),
+    )
+    for (let i = 0; i < 29; i++) await consume(user.id)
+
+    const error = await consume(user.id).catch((e: unknown) => e)
+
+    expect(error).toMatchObject({
+      code: 'BUFFER_WRITE_CAP',
+      retryInMinutes: 10,
+    })
+  })
+
+  it('rolls over after an hour', async () => {
+    const user = await freeUser()
+    for (let i = 0; i < 30; i++) await consume(user.id)
+    setClock(() => new Date(NOW.getTime() + HOUR + 1))
+
+    await expect(consume(user.id)).resolves.toEqual(expect.any(String))
+  })
+
+  it('does not count other users or other kinds', async () => {
+    const user = await freeUser()
+    const other = await freeUser()
+    for (let i = 0; i < 30; i++) await consume(other.id)
+    await seed(user.id, 'llm_call', 1, NOW)
+
+    await expect(consume(user.id)).resolves.toEqual(expect.any(String))
+  })
+
+  it('never counts toward reviewed posts or voice characters', async () => {
+    const user = await freeUser()
+    for (let i = 0; i < 30; i++) await consume(user.id)
+    const post = await createTestPost({ user })
+
+    const result = await checkAndConsume(user.id, {
+      postId: post.id,
+      kind: 'tts_chars',
+      amount: 12_000,
+    })
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('refundBufferWrite frees the slot and ignores unknown or non-write ids', async () => {
+    const user = await freeUser()
+    const ids: string[] = []
+    for (let i = 0; i < 30; i++) ids.push(await consume(user.id))
+    await seed(user.id, 'tts_chars', 5, NOW)
+    const tts = (await events(user.id)).find((e) => e.kind === 'tts_chars')!
+
+    await refundBufferWrite(ids[0]!)
+    await refundBufferWrite(tts.id)
+    await refundBufferWrite('not-a-uuid')
+
+    expect(await writes(user.id)).toHaveLength(29)
+    expect((await events(user.id)).some((e) => e.id === tts.id)).toBe(true)
+    await expect(consume(user.id)).resolves.toEqual(expect.any(String))
+  })
+
+  it('serializes concurrent writes under the user lock', async () => {
+    const user = await freeUser()
+    const results = await Promise.allSettled(
+      Array.from({ length: 35 }, () => consume(user.id)),
+    )
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(30)
+    expect(await writes(user.id)).toHaveLength(30)
   })
 })
