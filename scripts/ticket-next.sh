@@ -3,6 +3,9 @@
 # ticket-next.sh --check <N> → exit 1 if #N is closed, human, or blocked (ticket-start.sh runs this)
 set -euo pipefail
 
+# Clean up merged tickets first (best-effort; skipped for --check, which start.sh already preceded with a sweep)
+[ "${1:-}" = "--check" ] || "$(dirname "$0")/ticket-sweep.sh" || true
+
 ISSUES=$(gh issue list --state all --limit 1000 \
   --json number,title,state,stateReason,labels,body,blockedBy)
 MERGED=$(gh pr list --state merged --limit 1000 --json headRefName,baseRefName \

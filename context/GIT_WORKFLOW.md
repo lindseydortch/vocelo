@@ -127,7 +127,7 @@ This confirms you're in the right folder, on the right branch, for the right iss
   - **Ticket PRs into `dev` auto-merge.** After opening the PR, the ticket agent runs `gh pr merge <PR#> --auto --squash`. GitHub squash-merges it as soon as required checks pass. Nobody merges ticket PRs by hand.
   - Agents never merge any other way (no `git merge`, no `gh pr merge` without `--auto`).
   - The **only manual merge** is the final `dev` → `main` release PR, done by the human.
-  - After the auto-merge lands, the human (or coordinating session) runs `./scripts/ticket-cleanup.sh <issue>`.
+  - Cleanup is automatic: GitHub deletes the remote branch at merge, and `scripts/ticket-sweep.sh` (run by `ticket-start.sh` and `ticket-next.sh`) removes the local worktree and branch of every ticket whose PR merged into `dev`. Run `./scripts/ticket-sweep.sh` by hand to clean immediately.
   - If `dev` moved and the PR isn't up to date, rebase the ticket branch (`git rebase origin/dev` in its worktree), push with `--force-with-lease`, and let CI rerun.
 
 ---
@@ -578,7 +578,7 @@ test-results/
 - Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in, then enable auto-merge:
   `gh pr merge <PR#> --auto --squash`. Never merge any other way. Never run `git merge`.
 - Log assumptions in `context/assumptions.md` (see CLAUDE.md).
-- Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
+- Never run cleanup yourself; `ticket-sweep.sh` does it automatically after the PR merges.
 ```
 
 ---

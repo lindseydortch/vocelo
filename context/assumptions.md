@@ -18,3 +18,5 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 | #152 | need to review | Resolved native blocked-by links are deleted (not just hidden); the `**Blocked by:**` body line is the surviving record. | open |
 | #152 | nice to know | Workflow has no test (YAML only); verified by a local dry run that listed the stale #4 and #49 links. | open |
 | #152 | nice to know | Uses `${{ github.token }}` with `issues: write`; no PAT needed. | open |
+| #154 | need to review | Cleanup trigger is `ticket-sweep.sh`, run by `ticket-start.sh` and `ticket-next.sh`, not a daemon or GitHub Action (local worktrees can only be removed locally). Merged tickets stay on disk until the next start/next run. | open |
+| #154 | need to review | Turned on the repo setting "Automatically delete head branches" via the API. | open |
