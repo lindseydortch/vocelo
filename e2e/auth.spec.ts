@@ -25,3 +25,16 @@ test('signed-in user reaches /app and is bounced off /signin', async ({
   await page.goto('/signin')
   await expect(page).toHaveURL(/\/app$/)
 })
+
+test('sign out lands on / and /app then redirects to /signin', async ({
+  page,
+}) => {
+  await signInAs(page, 'free', { dbOff: true })
+  await page.goto('/app/settings')
+  // The button only works after hydration.
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await page.goto('/app')
+  await expect(page).toHaveURL(/\/signin\?returnTo=%2Fapp$/)
+})

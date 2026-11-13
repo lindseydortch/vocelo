@@ -20,6 +20,7 @@ import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].l
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ApiAudioKeyRouteImport } from './routes/api/audio/$key'
 import { Route as AppBillingCanceledRouteImport } from './routes/app/billing/canceled'
+import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AuthBufferStartRouteImport } from './routes/auth/buffer/start'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,11 @@ const AppBillingCanceledRoute = AppBillingCanceledRouteImport.update({
   path: '/billing/canceled',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AuthBufferStartRoute = AuthBufferStartRouteImport.update({
   id: '/auth/buffer/start',
   path: '/auth/buffer/start',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
+  '/app/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
+  '/app/settings': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
+  '/app/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/api/audio/$key'
     | '/app/billing/canceled'
     | '/auth/buffer/start'
+    | '/app/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/api/audio/$key'
     | '/app/billing/canceled'
     | '/auth/buffer/start'
+    | '/app/settings'
   id:
     | '__root__'
     | '/'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/api/audio/$key'
     | '/app/billing/canceled'
     | '/auth/buffer/start'
+    | '/app/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingCanceledRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/settings/': {
+      id: '/app/settings/'
+      path: '/settings'
+      fullPath: '/app/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/auth/buffer/start': {
       id: '/auth/buffer/start'
       path: '/auth/buffer/start'
@@ -274,11 +293,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppBillingCanceledRoute: typeof AppBillingCanceledRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppBillingCanceledRoute: AppBillingCanceledRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
