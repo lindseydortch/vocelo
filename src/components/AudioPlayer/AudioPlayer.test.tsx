@@ -150,4 +150,15 @@ describe('AudioPlayer', () => {
     act(() => audio(0).emit('error'))
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
   })
+
+  it('ignores late events from a stopped clip when the same clip is replayed', () => {
+    const clip = { mode: 'browser', personaId: 'c', text: 'hello' } as const
+    render(<AudioPlayer clip={clip} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    const first = at(synth.speak.mock.calls, 0)[0]
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    act(() => first.onerror())
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy()
+  })
 })

@@ -15,7 +15,7 @@ const IDLE: PlayerState = { status: 'idle', personaId: null, progress: 0 }
 
 // One shared controller for the whole app: starting a clip stops the current one.
 let state: PlayerState = IDLE
-let current: { clip: Clip; stop: () => void; pause: () => void; resume: () => void } | null = null
+let current: { id: object; clip: Clip; stop: () => void; pause: () => void; resume: () => void } | null = null
 const listeners = new Set<() => void>()
 
 function setState(next: PlayerState) {
@@ -39,7 +39,8 @@ function stop() {
 
 function startAudio(clip: Extract<Clip, { mode: 'audio' }>) {
   const el = new Audio(clip.url)
-  const isCurrent = () => current?.clip === clip
+  const id = {}
+  const isCurrent = () => current?.id === id
   el.addEventListener('timeupdate', () => {
     if (isCurrent() && el.duration > 0) {
       setState({ ...state, progress: Math.min(el.currentTime / el.duration, 1) })
@@ -52,6 +53,7 @@ function startAudio(clip: Extract<Clip, { mode: 'audio' }>) {
     if (isCurrent()) stop()
   })
   current = {
+    id,
     clip,
     stop: () => {
       el.pause()
@@ -67,7 +69,8 @@ function startBrowser(clip: Extract<Clip, { mode: 'browser' }>) {
   const synth = window.speechSynthesis
   synth.cancel()
   const utterance = new SpeechSynthesisUtterance(clip.text)
-  const isCurrent = () => current?.clip === clip
+  const id = {}
+  const isCurrent = () => current?.id === id
   utterance.onboundary = (e) => {
     if (isCurrent() && clip.text.length > 0) {
       setState({ ...state, progress: Math.min(e.charIndex / clip.text.length, 1) })
@@ -80,6 +83,7 @@ function startBrowser(clip: Extract<Clip, { mode: 'browser' }>) {
     if (isCurrent()) stop()
   }
   current = {
+    id,
     clip,
     stop: () => synth.cancel(),
     pause: () => synth.pause(),
@@ -90,7 +94,6 @@ function startBrowser(clip: Extract<Clip, { mode: 'browser' }>) {
 
 function play(clip: Clip) {
   stop()
-  current = null
   setState({ status: 'playing', personaId: clip.personaId, progress: 0 })
   if (clip.mode === 'audio') startAudio(clip)
   else startBrowser(clip)
@@ -115,17 +118,17 @@ export function resetAudioPlayer() {
 
 export function useAudioPlayer() {
   const snapshot = useSyncExternalStore(subscribe, () => state, () => IDLE)
-  const owned = useRef<Clip | null>(null)
+  const owned = useRef<object | null>(null)
 
   const start = useCallback((clip: Clip) => {
     play(clip)
-    owned.current = clip
+    owned.current = current?.id ?? null
   }, [])
 
   // Unmount or route change stops a clip this consumer started.
   useEffect(
     () => () => {
-      if (owned.current && current?.clip === owned.current) stop()
+      if (owned.current && current?.id === owned.current) stop()
     },
     [],
   )
