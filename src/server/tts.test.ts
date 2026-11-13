@@ -11,7 +11,11 @@ import { TtsError, synthesize } from './tts'
 
 const eleven = { provider: 'elevenlabs', apiKey: 'xi-secret' } as const
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.doUnmock('./env')
+  vi.resetModules()
+})
 
 describe('synthesize: elevenlabs', () => {
   it('posts the model, output format and key, and returns the mp3 bytes', async () => {
@@ -74,6 +78,20 @@ describe('synthesize: elevenlabs', () => {
     expect(err).toMatchObject({ code: 'FAILED' })
   })
 
+  it('maps a body that fails mid-stream to FAILED', async () => {
+    server.use(
+      http.post(elevenLabsTtsUrl(':v'), () => {
+        const body = new ReadableStream({
+          start: (c) => c.error(new Error('socket reset')),
+        })
+        return new Response(body, { headers: { 'content-type': 'audio/mpeg' } })
+      }),
+    )
+    await expect(synthesize('v', 'hi', eleven)).rejects.toMatchObject({
+      code: 'FAILED',
+    })
+  })
+
   it('maps an unexpected 4xx to FAILED, not QUOTA', async () => {
     server.use(
       http.post(
@@ -128,6 +146,5 @@ describe('synthesize: other providers', () => {
     const { synthesize: fresh } = await import('./tts')
     expect((await fresh('v', 'hi')).kind).toBe('audio')
     expect(key).toBe('from-env')
-    vi.doUnmock('./env')
   })
 })

@@ -68,14 +68,18 @@ async function elevenLabs(
   }
 
   if (res.ok) {
-    return { kind: 'audio', bytes: new Uint8Array(await res.arrayBuffer()) }
+    try {
+      return { kind: 'audio', bytes: new Uint8Array(await res.arrayBuffer()) }
+    } catch (cause) {
+      throw new TtsError('FAILED', 'ElevenLabs response body failed', { cause })
+    }
   }
 
   const requestId = res.headers.get('request-id') ?? 'unknown'
-  const status = await detailStatus(res)
   if (res.status === 429) {
     throw new TtsError('BUSY', 'ElevenLabs is busy, try again shortly')
   }
+  const status = await detailStatus(res)
   if (status === 'quota_exceeded') {
     console.error(
       `[tts] ElevenLabs quota exhausted (request-id ${requestId}, http ${res.status})`,
