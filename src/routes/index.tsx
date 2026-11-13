@@ -1,15 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import styles from './index.module.scss'
+import { PublicPage } from '~/components/PublicPage/PublicPage'
+import { pagesCopy } from '~/content/copy'
+import { pageTitle } from '~/lib/head'
+
+const page = pagesCopy.home
 
 export const Route = createFileRoute('/')({
-  component: Home,
+  head: () => ({ meta: [{ title: pageTitle(page.title) }] }),
+  component: () => <PublicPage heading={page.heading} body={page.body} />,
 })
-
-function Home() {
-  return (
-    <main className={styles.page}>
-      <h1>Vocelo</h1>
-      <p className={styles.note}>Placeholder home page.</p>
-    </main>
-  )
-}
