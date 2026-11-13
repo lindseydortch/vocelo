@@ -6,6 +6,8 @@ import { now } from '~/lib/clock'
 import { setSessionUser } from './session'
 
 export const TEST_USERS = ['free', 'creator'] as const
+const PERIOD_MS = 30 * 24 * 60 * 60 * 1000
+
 export type TestLoginUser = (typeof TEST_USERS)[number]
 
 /**
@@ -25,7 +27,7 @@ const isTestLoginUser = (v: string | null): v is TestLoginUser =>
 async function ensureTestUser(kind: TestLoginUser): Promise<string> {
   const accountId = `e2e_${kind}`
   const at = now()
-  const paid =
+  const planFields =
     kind === 'creator'
       ? {
           plan: 'creator',
@@ -33,18 +35,26 @@ async function ensureTestUser(kind: TestLoginUser): Promise<string> {
           stripeSubscriptionId: 'sub_e2e_creator',
           subscriptionStatus: 'active',
           currentPeriodStart: at,
-          currentPeriodEnd: new Date(at.getTime() + 30 * 86_400_000),
+          currentPeriodEnd: new Date(at.getTime() + PERIOD_MS),
         }
-      : { plan: 'free' }
+      : {
+          plan: 'free',
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          subscriptionStatus: null,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+        }
   await db
     .insert(users)
     .values({
       bufferAccountId: accountId,
       bufferOrganizationId: `org_e2e_${kind}`,
       email: `e2e-${kind}@example.test`,
-      ...paid,
+      ...planFields,
     })
-    .onConflictDoNothing({ target: users.bufferAccountId })
+    // Reset plan fields on reuse so a test that changed them can't leak into the next.
+    .onConflictDoUpdate({ target: users.bufferAccountId, set: planFields })
   const [user] = await db
     .select({ id: users.id })
     .from(users)

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
 /** Signs the page in as the seeded Free or Creator user via `/__test/login`. */
+// Keep the user names in sync with TEST_USERS in src/server/auth/test-login.ts.
 export async function signInAs(
   page: Page,
   user: 'free' | 'creator',

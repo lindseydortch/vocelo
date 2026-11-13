@@ -109,6 +109,21 @@ describe('handleTestLogin', () => {
     expect(rows).toHaveLength(1)
   })
 
+  it('resets plan fields on a reused user', async () => {
+    enable()
+    await handleTestLogin(req('free'))
+    await testDb
+      .update(users)
+      .set({ plan: 'creator' })
+      .where(eq(users.bufferAccountId, 'e2e_free'))
+    await handleTestLogin(req('free'))
+    const [user] = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.bufferAccountId, 'e2e_free'))
+    expect(user?.plan).toBe('free')
+  })
+
   it('404s when E2E_AUTH is unset', async () => {
     vi.stubEnv('NODE_ENV', 'test')
     const res = await handleTestLogin(req('free'))
