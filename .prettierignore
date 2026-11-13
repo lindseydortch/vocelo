@@ -1,1 +1,8 @@
 *.md
+node_modules
+dist
+.output
+.netlify
+coverage
+package-lock.json
+src/routeTree.gen.ts
