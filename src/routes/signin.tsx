@@ -4,6 +4,7 @@ import { validateSignInSearch } from '~/lib/auth-guard'
 import { pageTitle } from '~/lib/head'
 import { DEFAULT_RETURN_TO } from '~/server/auth/return-to'
 import { getViewer } from '~/server/auth/viewer'
+import styles from './signin.module.scss'
 
 const page = authCopy.signin
 
@@ -21,9 +22,10 @@ function SignIn() {
   const { returnTo, reason } = Route.useSearch()
   const href = `/auth/buffer/start?returnTo=${encodeURIComponent(returnTo ?? DEFAULT_RETURN_TO)}`
   return (
-    <main>
+    <main className={styles.page}>
       <h1>{page.heading}</h1>
       {reason === 'expired' && <p role="alert">{page.expired}</p>}
+      <p>{page.access}</p>
       <a href={href}>{page.cta}</a>
     </main>
   )
