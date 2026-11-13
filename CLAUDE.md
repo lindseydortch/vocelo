@@ -6,6 +6,7 @@
 2. `context/pricing-tiers.md`: plans, usage limits, history window
 3. `context/GIT_WORKFLOW.md`: branching, worktrees, ticket scripts, agent rules, who merges
 4. `context/environments.md`: which keys, database, and providers each environment uses
+5. `context/build-order.md`: which tickets to work in what order (snapshot; `./scripts/ticket-next.sh` is the live view)
 
 Don't duplicate these docs. If they conflict, **ask the human**; don't pick one silently.
 
