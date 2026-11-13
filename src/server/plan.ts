@@ -2,12 +2,17 @@ import type { users } from '../db/schema'
 
 type User = typeof users.$inferSelect
 
+/** Subscription statuses that grant Creator. */
+export const PAID_STATUSES: readonly string[] = [
+  'active',
+  'trialing',
+  'past_due',
+]
+
 export function getEffectivePlan(
   user: Pick<User, 'subscriptionStatus'>,
 ): 'free' | 'creator' {
-  return ['active', 'trialing', 'past_due'].includes(
-    user.subscriptionStatus ?? '',
-  )
+  return PAID_STATUSES.includes(user.subscriptionStatus ?? '')
     ? 'creator'
     : 'free'
 }
