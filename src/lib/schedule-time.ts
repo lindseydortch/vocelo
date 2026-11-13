@@ -4,6 +4,11 @@ export type DueAtCheck = 'ok' | 'TOO_SOON' | 'TOO_FAR'
 
 export const MIN_LEAD_MS = 5 * 60 * 1000
 const HOUR_MS = 60 * 60 * 1000
+const FALLBACK_TZ = 'UTC'
+
+function partValue(parts: Intl.DateTimeFormatPart[], type: string): string {
+  return parts.find((p) => p.type === type)?.value ?? ''
+}
 
 function isValidTimeZone(tz: string | null | undefined): tz is string {
   if (!tz) return false
@@ -19,6 +24,8 @@ function isValidTimeZone(tz: string | null | undefined): tz is string {
 function maxDueAt(now: Date): Date {
   const max = new Date(now.getTime())
   max.setUTCFullYear(max.getUTCFullYear() + 1)
+  // Feb 29 + 1 year overflows into March; clamp back to the last day of February.
+  if (max.getUTCMonth() !== now.getUTCMonth()) max.setUTCDate(0)
   return max
 }
 
@@ -73,12 +80,12 @@ export function resolveTimeZone(
 ): string {
   if (isValidTimeZone(userTz)) return userTz
   if (isValidTimeZone(browserTz)) return browserTz
-  return 'UTC'
+  return FALLBACK_TZ
 }
 
 /** "Tue 3:00 PM America/Chicago" */
 export function formatInZone(date: Date, tz: string): string {
-  const zone = isValidTimeZone(tz) ? tz : 'UTC'
+  const zone = isValidTimeZone(tz) ? tz : FALLBACK_TZ
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: zone,
     weekday: 'short',
@@ -86,6 +93,6 @@ export function formatInZone(date: Date, tz: string): string {
     minute: '2-digit',
     hour12: true,
   }).formatToParts(date)
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
-  return `${get('weekday')} ${get('hour')}:${get('minute')} ${get('dayPeriod')} ${zone}`
+  const text = (type: string) => partValue(parts, type)
+  return `${text('weekday')} ${text('hour')}:${text('minute')} ${text('dayPeriod')} ${zone}`
 }

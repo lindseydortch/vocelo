@@ -23,6 +23,13 @@ describe('validateDueAt', () => {
   it('accepts exactly 1 year ahead', () => {
     expect(validateDueAt(NOW, new Date('2027-06-01T12:00:00.000Z'))).toBe('ok')
   })
+  it('allows through Feb 28 of next year when now is Feb 29 (no overflow into March)', () => {
+    const leap = new Date('2028-02-29T12:00:00.000Z')
+    expect(validateDueAt(leap, new Date('2029-02-28T12:00:00.000Z'))).toBe('ok')
+    expect(validateDueAt(leap, new Date('2029-02-28T12:01:00.000Z'))).toBe(
+      'TOO_FAR',
+    )
+  })
   it('rejects 1 year + 1 minute', () => {
     expect(validateDueAt(NOW, new Date('2027-06-01T12:01:00.000Z'))).toBe(
       'TOO_FAR',
@@ -56,6 +63,14 @@ describe('defaultDueAt', () => {
     expect(defaultDueAt(now, 'Nope/Zone').toISOString()).toBe(
       '2026-06-01T13:00:00.000Z',
     )
+  })
+  it('lands on a wall-clock hour in America/Chicago across the 2027-03-14 spring-forward', () => {
+    const now = new Date('2027-03-14T07:56:00.000Z') // 1:56 AM CST, 2:00 AM does not exist
+    const due = defaultDueAt(now, 'America/Chicago')
+    expect(formatInZone(due, 'America/Chicago')).toBe(
+      'Sun 4:00 AM America/Chicago',
+    )
+    expect(validateDueAt(now, due)).toBe('ok')
   })
   it('always passes validateDueAt', () => {
     for (let m = 0; m < 120; m++) {
