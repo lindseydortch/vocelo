@@ -1,0 +1,29 @@
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { authCopy } from '~/content/copy'
+import { validateSignInSearch } from '~/lib/auth-guard'
+import { pageTitle } from '~/lib/head'
+import { getViewer } from '~/server/auth/viewer'
+
+const page = authCopy.signin
+
+export const Route = createFileRoute('/signin')({
+  validateSearch: validateSignInSearch,
+  beforeLoad: async () => {
+    const { signedIn } = await getViewer()
+    if (signedIn) throw redirect({ to: '/app' })
+  },
+  head: () => ({ meta: [{ title: pageTitle(page.title) }] }),
+  component: SignIn,
+})
+
+function SignIn() {
+  const { returnTo, reason } = Route.useSearch()
+  const href = `/auth/buffer/start?returnTo=${encodeURIComponent(returnTo ?? '/app')}`
+  return (
+    <main>
+      <h1>{page.heading}</h1>
+      {reason === 'expired' && <p role="alert">{page.expired}</p>}
+      <a href={href}>{page.cta}</a>
+    </main>
+  )
+}
