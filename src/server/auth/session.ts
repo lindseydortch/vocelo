@@ -132,6 +132,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return row
 }
 
+/**
+ * Whether the request carries a valid session cookie. Cookie check only (no
+ * database, no renewal), so error pages stay cheap and work when the DB is down.
+ */
+export function hasValidSessionCookie(): boolean {
+  const sealed = getCookie(SESSION_COOKIE)
+  return sealed ? unsealSession(sealed) !== null : false
+}
+
 /** For server functions: the signed-in user, or throws `UnauthenticatedError`. */
 export async function requireUser(): Promise<SessionUser> {
   const session = await getSessionUser()

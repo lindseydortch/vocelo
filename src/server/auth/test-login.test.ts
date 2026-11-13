@@ -27,11 +27,12 @@ vi.mock('~/db/client', () => ({
 }))
 
 const { SESSION_COOKIE, unsealSession } = await import('./session')
-const { handleTestLogin, isTestLoginEnabled } = await import('./test-login')
+const { DB_OFF_USER_ID, handleTestLogin, isTestLoginEnabled } =
+  await import('./test-login')
 
-const req = (user?: string) =>
+const req = (user?: string, extra = '') =>
   new Request(
-    `https://localhost/__test/login${user === undefined ? '' : `?user=${user}`}`,
+    `https://localhost/__test/login${user === undefined ? '' : `?user=${user}${extra}`}`,
   )
 
 afterEach(async () => {
@@ -145,6 +146,28 @@ describe('handleTestLogin', () => {
       const res = await handleTestLogin(req(bad))
       expect(res.status).toBe(400)
     }
+    expect(jar.values.size).toBe(0)
+  })
+})
+
+describe('handleTestLogin with db=off', () => {
+  it('sets a valid session cookie without creating any rows', async () => {
+    enable()
+    const res = await handleTestLogin(req('free', '&db=off'))
+    expect(res.status).toBe(302)
+    expect(unsealSession(jar.values.get(SESSION_COOKIE) ?? '')).toBe(
+      DB_OFF_USER_ID,
+    )
+    const rows = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.bufferAccountId, 'e2e_free'))
+    expect(rows).toHaveLength(0)
+  })
+
+  it('is still off without E2E_AUTH', async () => {
+    const res = await handleTestLogin(req('free', '&db=off'))
+    expect(res.status).toBe(404)
     expect(jar.values.size).toBe(0)
   })
 })
