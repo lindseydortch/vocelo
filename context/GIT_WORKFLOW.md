@@ -79,6 +79,8 @@ This confirms you're in the right folder, on the right branch, for the right iss
 
 ### 3. Work
 - Run the dev server on the ticket's port: `npm run dev:ticket`
+- **Write tests alongside the code, not after** (see [Testing Requirements](#testing-requirements))
+- Before opening a PR, run the full local check: `npm run verify`
 - Commit small and often using [Conventional Commits](https://www.conventionalcommits.org):
   `feat(billing): add Stripe checkout session (#12)`
 - Keep up to date with `dev` before opening a PR:
@@ -91,8 +93,44 @@ This confirms you're in the right folder, on the right branch, for the right iss
 - Title: `feat: Stripe checkout (#12)`
 - Body includes `Closes #12`. This auto-closes the issue **only if `dev` is the default branch.**
 - One PR per issue. Never combine issues in a PR.
-- CI must pass (typecheck, lint, build, Playwright).
-- Review it yourself, then **squash merge.**
+- Fill in the PR template's **Testing** section (what's tested, how to verify manually).
+- **CI must pass. GitHub blocks the merge otherwise** (required status checks): typecheck → lint → unit + integration tests with coverage → build → Playwright E2E.
+- **No tests, no merge.** A PR that adds or changes behavior without tests gets sent back, even if CI is green.
+- Review it yourself (including the tests), then **squash merge.**
+
+---
+
+## Testing Requirements
+
+### Every ticket ships with tests
+| Ticket changes... | Required tests |
+|---|---|
+| Logic: utilities, plan limits, usage counters, prompt builders, data mapping | **Unit tests** (Vitest) |
+| Server functions/routes: Buffer, Stripe, ElevenLabs, LLM, R2, database | **Integration tests** (Vitest + mocked external APIs) |
+| A user-facing flow or page | **E2E test** (Playwright): at least the happy path |
+| A bug fix | A **regression test** that fails before the fix and passes after |
+| Styling only / docs / config | No new tests required (CI must still pass) |
+
+### Minimum per ticket
+- **Happy path** + **at least one failure case** (e.g., Buffer returns an error, plan limit reached, invalid upload)
+- **Plan behavior:** if the ticket behaves differently by plan, test Free and at least one paid plan
+- Every acceptance criterion in the ticket maps to at least one test
+
+### Rules
+- **Tests never call real external services.** Mock Buffer, Stripe, ElevenLabs, the LLM, and R2 (e.g., with MSW). Use seeded data from `npm run seed`.
+- **Stripe webhooks:** test with signed fixture events (valid signature, invalid signature, each event type handled).
+- **No skipped or focused tests:** `.skip` and `.only` fail lint.
+- **No flaky tests:** a test that fails intermittently gets fixed or removed in the same PR, never ignored.
+- **Coverage thresholds** (enforced in CI by Vitest): **80% lines** for `src/server/` and `src/lib/` (logic). UI components aren't held to a percentage; they're covered by E2E tests.
+- Tests live next to the code: `thing.ts` → `thing.test.ts`. E2E tests live in `e2e/`.
+
+### Definition of Done
+- [ ] Acceptance criteria met
+- [ ] Tests written per the table above, mapped to acceptance criteria
+- [ ] `npm run verify` passes locally
+- [ ] CI green
+- [ ] PR template filled in, including the Testing section
+- [ ] Works on desktop (1280px+)
 
 ### 5. Clean up (after the PR is merged)
 ```bash
@@ -299,9 +337,52 @@ Make them executable: `chmod +x scripts/*.sh`. Requires the GitHub CLI (`gh auth
 ```json
 {
   "scripts": {
-    "dev:ticket": "set -a && . ./.ticket.env && set +a && vite dev --port $PORT"
+    "dev:ticket": "set -a && . ./.ticket.env && set +a && vite dev --port $PORT",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm run lint && npm run test:coverage && npm run build && npm run test:e2e"
   }
 }
+```
+
+### `vitest.config.ts` (relevant part)
+```ts
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/server/**', 'src/lib/**'],
+      thresholds: { lines: 80 },  // CI fails below this
+    },
+  },
+});
+```
+
+### Lint rule: block `.skip` / `.only`
+Use `eslint-plugin-vitest` (`no-focused-tests`, `no-disabled-tests`) and Playwright's `forbidOnly: !!process.env.CI` in `playwright.config.ts`.
+
+### `.github/pull_request_template.md`
+```md
+## What & why
+Closes #
+
+## Testing
+- [ ] Unit tests: <!-- what's covered -->
+- [ ] Integration tests (external APIs mocked): <!-- what's covered -->
+- [ ] E2E (Playwright): <!-- which flow -->
+- [ ] Failure case(s) tested: <!-- which -->
+- [ ] Plan behavior tested (Free + paid), if applicable
+- [ ] `npm run verify` passes locally
+
+**How to verify manually:**
+1.
+
+## Notes
+<!-- Work noticed that belongs to another issue goes here -->
 ```
 
 ### `playwright.config.ts` (relevant part)
@@ -323,7 +404,8 @@ export default defineConfig({
 
 ### GitHub repo settings
 - [ ] Default branch: **`dev`**
-- [ ] Branch protection on `main` and `dev`: require a PR and passing status checks, block force pushes
+- [ ] Branch protection on `main` and `dev`: require a PR, block force pushes, and **require these status checks to pass before merging**: `typecheck`, `lint`, `test` (with coverage), `build`, `e2e`
+- [ ] "Require branches to be up to date before merging" (tests run against the latest `dev`)
 - [ ] Merge buttons: allow **squash** (tickets) and **merge commit** (releases)
 - [ ] Turn on "Automatically delete head branches" (cleanup handles it either way)
 
@@ -338,7 +420,10 @@ test-results/
 ```
 
 ### CI (GitHub Actions on PRs to `dev` and `main`)
-- [ ] Typecheck → Lint → Build → Playwright tests
+- [ ] Jobs, each a **required status check**: `typecheck` → `lint` → `test` (unit + integration + coverage thresholds) → `build` → `e2e` (Playwright)
+- [ ] CI uses mocked external APIs and seeded test data; no real API keys needed except a CI test database (Neon branch)
+- [ ] Upload the Playwright report as an artifact when E2E fails (for debugging)
+- [ ] Test tooling set up in ticket #1 (repo scaffold): Vitest, coverage, MSW, Playwright, lint rules, PR template
 
 ### Environments
 - `dev` deploys to a **preview/staging** URL (Stripe **test** keys)
@@ -361,7 +446,11 @@ test-results/
   Never touch another issue's branch, port, browser, or folder.
 - If you notice work that belongs to a different issue, write it down in the PR description; do not do it.
 - Use Conventional Commits that reference the issue number.
-- Open one PR into `dev` with "Closes #<issue>". Never merge your own PR.
+- Every ticket ships with tests per "Testing Requirements": happy path + at least one failure case,
+  mapped to acceptance criteria. Never call real external APIs in tests. Never use `.skip` or `.only`.
+- Run `npm run verify` and make it pass before opening a PR. Never weaken a test or lower a
+  coverage threshold to make CI pass.
+- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR.
 - Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
 ```
 

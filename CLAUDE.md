@@ -19,6 +19,7 @@ Title `<type>: <description>` · labels (`MVP`/`stretch` + area) · acceptance c
 ## Non-negotiables when building- One issue = one branch = one folder = one port = one agent. Follow `context/GIT_WORKFLOW.md` exactly.
 - No visual design until the Design Pass. `rem` only (1rem = 10px). Desktop-first. Details in `context/project-bible.md`.
 - Secrets and plan enforcement stay server-side.
+- No tests, no merge. Every ticket ships with tests; npm run verify must pass. See "Testing Requirements" in GIT_WORKFLOW.md.
 
 ## Commit messages and PR descriptions
 End every commit message and PR description with its own body text. Leave out all Claude attribution: no `Co-Authored-By: Claude` or `Claude-Session` trailers, no "Generated with Claude Code" footer, no session links. This applies to every commit and PR in this project, including squash-merge messages.

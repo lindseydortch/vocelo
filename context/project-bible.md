@@ -61,7 +61,7 @@ Output of grilling Step 0. Sections below are already updated to match.
 6. Publish `/privacy` + `/terms` at real URLs (Buffer app client + Stripe need them)
 
 ### Ticket budget
-~3 parallel lanes × ~10 h ÷ ~1.5 h/ticket ≈ **20 tickets**. The current MVP is ~4 tickets over. Cut order is in section 12.
+~3 parallel lanes × ~10 h ÷ ~1.5 h/ticket ≈ **20 tickets**. The ~1.5 h per ticket **includes writing its tests**; don't budget tests as separate tickets. The current MVP is ~4 tickets over. Cut order is in section 12.
 
 ### Critical path
 ```
@@ -249,6 +249,45 @@ Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the s
   - Use a Neon branch per environment (`dev`, `main`) so preview deploys never touch production data
 - [ ] Error handling + loading states (Buffer `MutationError`, ElevenLabs rate limits, LLM failures)
 - [ ] Demo fallback mode (pre-generated audio + reactions for a sample post)
+- [ ] **⚠️ REQUIRED: Testing setup (part of the scaffold ticket, before any feature work)**
+  Full rules: "Testing Requirements" in `context/GIT_WORKFLOW.md`. **No tests, no merge.**
+  - **Vitest** for unit + integration tests; tests live next to code (`thing.ts` → `thing.test.ts`)
+  - **Coverage thresholds** (Vitest, v8): 80% lines on `src/server/**` and `src/lib/**`; UI is covered by E2E instead
+  - **MSW** mocks every external API in tests: Buffer GraphQL, Stripe, ElevenLabs, Anthropic. Tests never call real services or spend credits.
+  - **Playwright** for E2E in `e2e/`; `forbidOnly` in CI
+  - **Lint rules** block `.skip` / `.only` (`eslint-plugin-vitest`)
+  - **`npm run verify`** = typecheck → lint → tests + coverage → build → E2E
+  - **`.github/pull_request_template.md`** with a required Testing section
+  - **GitHub Actions CI** with required status checks on `dev` and `main`: `typecheck`, `lint`, `test`, `build`, `e2e`. Runs on GitHub, separate from Netlify deploys.
+  - **CI database:** a dedicated Neon `ci` branch, reset and re-seeded per run (never `dev` or `main`); Drizzle migrations run first
+  - **E2E sign-in helper:** E2E tests can't complete real Buffer OAuth (it only works on port 3000, and tests must not hit Buffer). Add a **test-only** route or fixture that creates a seeded user's session cookie. It must be impossible to enable in production (guarded by an env flag that's never set on Netlify production, plus a check that fails the build if it is).
+  - **Stripe in tests:** never drive the hosted Checkout page. Test plan changes by sending **signed fixture webhook events** to `/api/stripe/webhook` (valid signature, invalid signature, duplicate event ID for idempotency, each handled event type).
+  - **Fixed clock** in tests for usage periods, history windows, and anniversary resets (e.g., Vitest fake timers or an injectable `now()`)
+  - **Shared test helpers:** `createTestUser({ plan })`, `createTestPost({ lastEditedAt })`, Buffer/Stripe/ElevenLabs/Anthropic MSW handlers with success + error variants
+
+#### What every feature area must test
+| Area | Must cover |
+|---|---|
+| Sign-in | State mismatch rejected; PKCE exchange; find-or-create user by `buffer_account_id`; refresh rotation with the DB lock (two concurrent refreshes → one wins); refresh failure ends session; sign out vs. disconnect |
+| Buffer drafts | Create; overwrite text while **preserving existing assets**; draft deleted in Buffer → recreated; draft scheduled/sent → blocked; channel disconnected → saving disabled; import once (unique constraint); unsupported channels hidden |
+| Character limits | At the limit, over by 1, per channel; over-limit import blocks saving |
+| Usage + plans | Check-then-consume is atomic (concurrent requests can't overspend); refund on provider failure; "too big for what's left" blocks with no partial read; cached replays, imports, and the sample post never count; first billable action counts the post once per period; Free vs. Creator limits; effective plan for `active` / `trialing` / `past_due` / canceled |
+| Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
+| History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
+| Billing | Webhook signature check; idempotency via `stripe_events`; success page before the webhook lands; Customer Portal link |
+| Personas | Standard personas exist via migration; Creator limit of 5 custom; Free blocked; soft delete keeps old reactions' names; downgrade locks custom personas; Free "1 persona per post" locks in |
+| Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters |
+| Reactions + Tone read | Schema-valid JSON parsed; invalid JSON → retry once → friendly error, nothing consumed; cache by text hash; "Text changed: refresh"; 60 LLM calls / hour cap |
+| Versions + scheduling | Version only on successful Buffer save + changed text; restore doesn't rewrite history; schedule with `dueAt` (timezone per Step 9) |
+| Pages | E2E happy path per page; empty, loading, and limit-reached states render; protected routes redirect to sign-in |
+
+#### E2E flows (Playwright)
+1. Sign in (test helper) → sample post → hear a standard persona (static demo audio)
+2. New post → pick channel → over the character limit blocks save → fix → save draft (Buffer mocked)
+3. Free user hits the reviewed-posts limit → upgrade prompt → fixture webhook → Creator → create a custom persona
+4. Edit + save twice → version history → restore → save creates a new version
+5. Approve & schedule (Buffer mocked)
+6. Free user: posts older than 30 days are locked; teaser card shows the count
 - [ ] **Test data + seed script** (`npm run seed`, runs against the Neon `dev` branch, never production)
   - **Text-only post:** a realistic LinkedIn-length post (~800 characters) with a few lines that read differently by persona (e.g., one humblebrag, one unclear sentence)
   - **Imported Buffer draft with 2 images:** tests that saving from Vocelo preserves Buffer images
