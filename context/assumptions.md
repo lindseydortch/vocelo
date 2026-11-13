@@ -10,6 +10,8 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 
 | Ticket | Label | Assumption | Status |
 |---|---|---|---|
+| #52 | nice to know | A connection with null access expiry is a non-expiring dev personal API key and is returned without refresh unless forced. Invalid successful token responses are temporary errors and preserve credentials. Auth expiry is an Error with both message and code `BUFFER_AUTH_EXPIRED`; session clearing remains the caller's responsibility. |
+| #52 | nice to know | Human confirmed token-endpoint HTTP 429 deletes credentials as `BUFFER_AUTH_EXPIRED`, matching the ticket’s any-4xx rule. Updated the project bible to distinguish token-endpoint 429 from temporary GraphQL rate limiting. |
 | #5 | need to review | MSW 3 renamed `onUnhandledRequest` to `onUnhandledFrame`; used `onUnhandledFrame: 'error'` in `src/test/setup.ts` instead of the ticket's wording. | open |
 | #5 | need to review | No lint script exists yet, so `verify` = typecheck → test:coverage → build. Lint must be inserted before tests when its ticket lands. | open |
 | #5 | nice to know | `now()` returns a fresh `Date` copy each call so callers can't mutate the clock. | open |
@@ -98,5 +100,3 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 | #78 | nice to know | Human confirmed ticket agents should open PRs and enable auto-merge, resolving the older coordinating-session merge wording in project-bible.md for this ticket. | confirmed |
 | #73 | need to review | `completeSignIn(tokens)` takes a `BufferTokens` shape I defined (`{accessToken, refreshToken|null, expiresIn|null, scope}`); the token-exchange ticket must produce it. `ensureSamplePost(userId)` runs after the transaction commits (on every sign-in, not only new users, since it is idempotent) because it opens its own connection and the user row must be visible. Any lookup failure, malformed response, or an account with no organizations throws `AccountLookupError` (`reason = 'account'`). | open |
 | #59 | nice to know | `channels_cache` is untyped `jsonb` (no `$type`); the consumer ticket (B5/B6) should narrow it. The check constraint is named `posts_channel_required`. `ALTER TYPE ... ADD VALUE` runs inside the migration transaction, which is fine on Postgres 12+ as long as no new value is used in the same migration. | open |
-| #52 | nice to know | A connection with null access expiry is a non-expiring dev personal API key and is returned without refresh unless forced. Invalid successful token responses are temporary errors and preserve credentials. Auth expiry is an Error with both message and code `BUFFER_AUTH_EXPIRED`; session clearing remains the caller's responsibility. |
-| #52 | nice to know | Human confirmed token-endpoint HTTP 429 deletes credentials as `BUFFER_AUTH_EXPIRED`, matching the ticket’s any-4xx rule. Updated the project bible to distinguish token-endpoint 429 from temporary GraphQL rate limiting. |
