@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { authCopy } from '~/content/copy'
 import { validateSignInSearch } from '~/lib/auth-guard'
 import { pageTitle } from '~/lib/head'
+import { DEFAULT_RETURN_TO } from '~/server/auth/return-to'
 import { getViewer } from '~/server/auth/viewer'
 
 const page = authCopy.signin
@@ -18,7 +19,7 @@ export const Route = createFileRoute('/signin')({
 
 function SignIn() {
   const { returnTo, reason } = Route.useSearch()
-  const href = `/auth/buffer/start?returnTo=${encodeURIComponent(returnTo ?? '/app')}`
+  const href = `/auth/buffer/start?returnTo=${encodeURIComponent(returnTo ?? DEFAULT_RETURN_TO)}`
   return (
     <main>
       <h1>{page.heading}</h1>
