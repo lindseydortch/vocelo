@@ -23,6 +23,7 @@
     "db:migrate": "node --env-file-if-exists=.env.local ./node_modules/.bin/drizzle-kit migrate"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.1.9",
     "@tanstack/react-router": "^1.170.46",
     "@tanstack/react-start": "^1.169.5",
     "drizzle-orm": "^0.45.4",
