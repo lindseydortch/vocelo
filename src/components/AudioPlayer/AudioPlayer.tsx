@@ -12,14 +12,23 @@ export function AudioPlayer({ clip }: { clip: Clip }) {
   }
 
   return (
-    <div role="group" aria-label="Audio player" data-persona-id={clip.personaId} data-playing={active && player.isPlaying}>
+    <div
+      role="group"
+      aria-label="Audio player"
+      data-persona-id={clip.personaId}
+      data-playing={active && player.isPlaying}
+    >
       <button type="button" onClick={toggle}>
         {active && player.isPlaying ? 'Pause' : 'Play'}
       </button>
       <button type="button" onClick={player.stop} disabled={!active}>
         Stop
       </button>
-      <progress max={1} value={active ? player.progress : 0} aria-label="Playback progress" />
+      <progress
+        max={1}
+        value={active ? player.progress : 0}
+        aria-label="Playback progress"
+      />
     </div>
   )
 }

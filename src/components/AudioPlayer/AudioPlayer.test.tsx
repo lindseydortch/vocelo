@@ -41,13 +41,26 @@ function at<T>(items: T[], i: number): T {
   return item
 }
 
-const synth = { speak: vi.fn(), cancel: vi.fn(), pause: vi.fn(), resume: vi.fn() }
+const synth = {
+  speak: vi.fn(),
+  cancel: vi.fn(),
+  pause: vi.fn(),
+  resume: vi.fn(),
+}
 
 beforeEach(() => {
   FakeAudio.instances = []
   vi.stubGlobal('Audio', FakeAudio)
-  vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} })
-  Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true })
+  vi.stubGlobal(
+    'SpeechSynthesisUtterance',
+    class {
+      constructor(public text: string) {}
+    },
+  )
+  Object.defineProperty(window, 'speechSynthesis', {
+    value: synth,
+    configurable: true,
+  })
 })
 
 afterEach(() => {
@@ -118,13 +131,19 @@ describe('AudioPlayer', () => {
   })
 
   it('speaks browser-mode clips and cancels on unmount', () => {
-    const clip = { mode: 'browser', personaId: 'c', text: 'hello there' } as const
+    const clip = {
+      mode: 'browser',
+      personaId: 'c',
+      text: 'hello there',
+    } as const
     const { unmount } = render(<AudioPlayer clip={clip} />)
     fireEvent.click(screen.getByRole('button', { name: 'Play' }))
     expect(synth.speak).toHaveBeenCalledTimes(1)
     const utterance = at(synth.speak.mock.calls, 0)[0]
     act(() => utterance.onboundary({ charIndex: 5 }))
-    expect(Number(screen.getByRole('progressbar').getAttribute('value'))).toBeCloseTo(5 / 11)
+    expect(
+      Number(screen.getByRole('progressbar').getAttribute('value')),
+    ).toBeCloseTo(5 / 11)
     synth.cancel.mockClear()
     unmount()
     expect(synth.cancel).toHaveBeenCalled()

@@ -8,14 +8,14 @@ export function PublicPage({
   children,
 }: {
   heading: string
-  body: string
+  body?: string
   children?: ReactNode
 }) {
   return (
     <>
       <main className={styles.page}>
         <h1>{heading}</h1>
-        <p>{body}</p>
+        {body && <p>{body}</p>}
         {children}
       </main>
       <PublicFooter />

@@ -44,7 +44,9 @@ describe('BillingCanceled', () => {
       screen.getByRole('heading', { level: 1, name: 'No changes made' }),
     ).toBeTruthy()
     expect(
-      screen.getByRole('link', { name: 'Back to pricing' }).getAttribute('href'),
+      screen
+        .getByRole('link', { name: 'Back to pricing' })
+        .getAttribute('href'),
     ).toBe('/pricing')
   })
 })
