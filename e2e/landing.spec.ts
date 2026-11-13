@@ -48,7 +48,8 @@ test('signed out: CTA starts Buffer sign-in', async ({ page }) => {
 
 test('signed in: CTA opens the app and / stays put', async ({ page }) => {
   // Not signInAs(): it follows the redirect to /app, which 404s until the app routes exist.
-  const login = await page.request.get('/__test/login?user=free', {
+  // db=off sets only the session cookie, which is all the CTA reads (CI's e2e has no database).
+  const login = await page.request.get('/__test/login?user=free&db=off', {
     maxRedirects: 0,
   })
   expect(login.status()).toBe(302)
