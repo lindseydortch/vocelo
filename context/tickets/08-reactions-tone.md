@@ -121,7 +121,7 @@ Cut order if time runs out: R8's persona-state notes (keep text-stale only) firs
 **Labels:** `MVP`, `analysis`
 **Acceptance criteria**
 - [ ] Right panel, under Read aloud: "Get reaction" for the selected persona (V9); calls `flush()` (C4) then R4; shows "Thinking…" and is disabled while running; disabled while the post is blank
-- [ ] Errors map to `copy.ts`: "Couldn't get a reaction. Try again." · "Reactions are busy. Try again in a few seconds." · "Reactions are unavailable right now." · over-limit message shared with Read aloud · usage errors render P12 `LimitReached`
+- [ ] Errors map to `copy/analysis.ts`: "Couldn't get a reaction. Try again." · "Reactions are busy. Try again in a few seconds." · "Reactions are unavailable right now." · over-limit message shared with Read aloud · usage errors render P12 `LimitReached`
 - [ ] On success the new reaction appears in the list (R8 or a minimal render until R8 merges)
 - [ ] Free-plan note (`<ReviewCostNote>`, shared with R9): shown only when effective plan is Free and `reviewedThisPeriod` is false: "Uses 1 of your 5 posts this period (N left)." / "Uses your last free post this period." Hidden after success (post is now reviewed); hidden for Creator and the sample post
 - [ ] E2E (`LLM_PROVIDER=fixture`): `free` sees "Uses 1 of your 5 posts" → gets a reaction → note disappears → reactions from the other 2 standard personas show no note; `creator` never sees it
@@ -129,7 +129,7 @@ Cut order if time runs out: R8's persona-state notes (keep text-stale only) firs
 
 **Plan behavior:** same button on every plan; Free sees the review-cost note on not-yet-reviewed posts; other plan differences come from R4 errors.
 **Blocked by:** R4, R6; Step 5 P9 (posts left), P12; Step 6 C4; Step 7 V9.
-**Files likely touched:** `src/components/ReactionPanel/GetReactionButton.tsx`, `src/components/ReviewCostNote/*`, `src/content/copy.ts`, `e2e/reactions.spec.ts`
+**Files likely touched:** `src/components/ReactionPanel/GetReactionButton.tsx`, `src/components/ReviewCostNote/*`, `src/content/copy/analysis.ts`, `e2e/reactions.spec.ts`
 **Out of scope:** card states (R8), styling (Design Pass).
 
 ---
@@ -145,7 +145,7 @@ Cut order if time runs out: R8's persona-state notes (keep text-stale only) firs
 
 **Plan behavior:** Free sees cards for standard personas plus any from Creator days (locked). Creator sees all.
 **Blocked by:** R7; Step 5 P4; Step 7 V2 (avatars).
-**Files likely touched:** `src/components/ReactionPanel/ReactionCard.tsx`, `ReactionList.tsx`, `src/content/copy.ts`, `e2e/reactions.spec.ts`
+**Files likely touched:** `src/components/ReactionPanel/ReactionCard.tsx`, `ReactionList.tsx`, `src/content/copy/analysis.ts`, `e2e/reactions.spec.ts`
 **Out of scope:** reaction history, "react with all", animated reactions (stretch).
 
 ---
@@ -162,7 +162,7 @@ Cut order if time runs out: R8's persona-state notes (keep text-stale only) firs
 
 **Plan behavior:** identical on every plan, except Free sees the review-cost note on not-yet-reviewed posts.
 **Blocked by:** R5, R6, R7 (`ReviewCostNote`); Step 5 P12; Step 6 C4.
-**Files likely touched:** `src/components/ToneRead/*`, `src/content/copy.ts`, `e2e/tone.spec.ts`
+**Files likely touched:** `src/components/ToneRead/*`, `src/content/copy/analysis.ts`, `e2e/tone.spec.ts`
 **Out of scope:** Tone heat map (stretch), label colors (Design Pass).
 
 ---

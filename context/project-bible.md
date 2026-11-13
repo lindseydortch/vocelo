@@ -92,14 +92,14 @@ The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund
 | 4 | Billing | Data model, Sign-in | Buffer integration, Reactions + tone |
 | 4 | Reactions + tone | Personas, LLM decision | Buffer integration, Billing |
 | 5 | Versions + scheduling | Buffer integration, Composer | Page wiring |
-| 6 | Pages | Route stubs in 2; final wiring last | Everything |
+| 6 | Pages | Route stubs (G1) right after the scaffold; final wiring last | Everything |
 | 7 | Design Pass | Full flow working | — |
 
 ### Open questions handed to later grilling sessions
 - ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
 - ~~Step 3 (sign-in)~~ ✅ answered; see "Step 3 Decisions" below
 - ~~**Step 9 (scheduling)**~~ ✅ answered; see "Step 9 Decisions" below
-- **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
+- ~~**Step 10 (pages)**~~ ✅ answered; see "Step 10 Decisions" below (sample post is inserted by `ensureSamplePost` from code, no seed data)
 
 ---
 
@@ -530,7 +530,7 @@ Step 7 drafts 16 tickets (`context/tickets/07-personas-playback.md`) + human tic
 |---|---|
 | Where | Built **in code at request time** (`src/server/prompts/`), not stored. `personas.reaction_prompt` removed. Standard personas' prompts keyed by their fixed IDs; custom personas use one template fed by "Who is this reader?". |
 | Injection guard | Fixed system prompt per kind. Post text in `<post>`, reader description in `<reader>` (closing tags in user text escaped); the system prompt says tag contents are data, never instructions. Schema-enforced output, no tools. No moderation (only the author sees the result). |
-| Wording | Agents write first drafts; the human tunes them on build day (**H11**). UI strings are placeholders in `copy.ts`. |
+| Wording | Agents write first drafts; the human tunes them on build day (**H11**). UI strings are placeholders in `src/content/copy/analysis.ts`. |
 
 ### Sample post, fixtures, demo
 - **Sample post:** pre-made reactions for the 3 standard personas + a Tone read, hand-written in `src/content/sample-post.ts`. Get reaction / Read the tone return them free. Custom personas: "Try this on your own post".
@@ -609,6 +609,45 @@ None. `posts.buffer_status`, `posts.due_at`, `versions`, `users.timezone` alread
 
 ### Tickets
 Step 9 drafts 10 tickets (`context/tickets/09-versions-scheduling.md`) + human tickets H12, H13.
+
+---
+
+## Step 10 Decisions: Pages (agreed 2026-11-13)
+
+### Already owned by earlier steps
+`/signin` S11 · `/auth/callback` S6 · `/auth/error` S12 · `/app/billing/success` P5 · `/app/billing/canceled` P6 · `/app/settings/billing` P10 · `/app/personas` V12 · composer C1 + B7. Step 10 builds the rest: landing, pricing layout, privacy, terms, 404/error, dashboard list, account settings, app shell, sample post, first-run.
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Legal pages + prod client | **Left until demo day.** Production only deploys `main` (one release PR on demo day), so `/privacy` + `/terms` go live then; H8 (review + confirm live) → H5 (production Buffer client) run **after** the release merges. Production sign-in doesn't work before that; the localhost demo doesn't need it. |
+| Copy files | `src/content/copy.ts` split into `src/content/copy/<area>.ts` (`auth`, `buffer`, `billing`, `composer`, `personas`, `analysis`, `versions`, `pages`) re-exported from `index.ts`, created by I1. Every drafted ticket's file list updated. |
+| CMS | **No CMS in MVP.** Payload 3 needs a Next.js host (separate app, its own tables, admin auth): ~½–1 day + a demo-day failure point. Stretch. |
+| Lorem ipsum | **Marketing copy** (landing hero, problem/solution, how it works, persona blurbs, FAQ answers, pricing descriptions) = lorem ipsum until the Design Pass picks a brand direction. **Plain working text** for buttons, errors, limits, statuses, empty states (E2E asserts on them). **Real text** for Privacy/Terms. **Real facts** (plan names, prices, limits, channels) from `src/content/plans.ts`. |
+| Placeholder blockers | B15, B16, P13 were blocked by an undrafted "Step 10 dashboard placeholder" → now blocked by **G7**. P8 → **G1**. P11 → **G3**. |
+| Sample post | `ensureSamplePost` inserts one `is_sample` LinkedIn post (`channel_id` null) from `src/content/sample-post.ts` **only when S7 creates the user**. No seed data, so production works. Deleting it is permanent (restore = stretch). |
+| First run | Welcome card at the top of `/app` while the user has the sample and **no other posts** ("Hear the sample post" / "Start your own post"). No stored dismissal. |
+| Dashboard | Visible posts (T7) by `last_edited_at` desc; no pagination/search/filters. Row: channel name + service, first ~80 chars or "Empty post", status badge (B16), "Edited {relative}", "Sample" tag, Delete (C13 confirm). Order: welcome → New post → list → locked teaser (P13) → Import from Buffer (B15). Zero posts → empty state; only locked posts → "No posts in the last 30 days / 12 months" + teaser. No Buffer calls on load. |
+| App shell | Header on every `/app/*`: Vocelo → `/app`, Posts, Personas, Settings; plan chip (Free: "Free · 3 of 5 posts" + Upgrade; Creator: "Creator") → billing settings. **P11's past_due banner moves into the shell** (every app page, not just billing + composer). |
+| Landing | Hero CTA → `/auth/buffer/start?returnTo=/app` (skips `/signin`). Signed-in visitors still see `/`, CTA becomes "Open Vocelo". Persona showcase plays static `/demo/landing-<persona>.mp3`, one at a time; load failure → "Sample unavailable". Pricing section = 3 compact cards with P8 CTAs + "Compare plans". |
+| Pricing | Table driven by `src/content/plans.ts`. **Stretch rows omitted** (voice-to-text, heat map, compare, Ideas, brand pack); only Team's column says "Coming soon". `pricing-tiers.md` updated. |
+| Legal text | Agent drafts plain-language Privacy + Terms (data stored, processors Buffer/ElevenLabs/Anthropic/Stripe/Netlify/Neon, no selling, deletion via `support@`); human reviews in H8. Not legal advice. |
+| 404 / errors / loading | Root `notFoundComponent` + `errorComponent`, inside the app shell under `/app`. Error shows "Reference: {requestId}". Links go to `/app` signed in, `/` signed out. One shared pending component after 300 ms. Titles "{Page} · Vocelo"; `/app/*` is `noindex`; OG images stretch. |
+| Account settings | Buffer account name + email, org name, timezone line, dev-key marker, Sign out (S13), Disconnect (S14). Account / Billing tabs shared with P10. Names stored at sign-in so settings never calls Buffer. |
+
+### Schema additions (additive migration, G16)
+- `users.buffer_account_name`, `users.buffer_organization_name` (nullable text), written by S7 and `/__dev/login` on every sign-in.
+
+### Conflicts flagged
+- **H5/H8 vs. release timing:** H8 said legal pages must be public before H5, but `main` only deploys on demo day → both moved to after the release PR (`00-human.md`).
+- **`copy.ts`:** one shared file in nearly every ticket → per-area files (I1 amended; tickets updated).
+- **Undrafted "Step 10 placeholder" blockers** in B15, B16, P8, P13 → re-pointed to G1/G7.
+- **P11 scope:** banner moved from billing + composer to the app shell (G3).
+- **`pricing-tiers.md`:** "show stretch features as coming soon" → omitted from `/pricing`.
+- **Sample post:** bible said "from seed data"; it's created in code by `ensureSamplePost`.
+
+### Tickets
+Step 10 drafts 18 tickets (`context/tickets/10-pages.md`). H5 + H8 rewritten in `00-human.md`.
 
 ---
 
@@ -815,7 +854,7 @@ Full rules: "Step 9 Decisions"; the why: `context/versions-scheduling.md`. Ticke
 - [ ] Move back to draft for scheduled posts
 
 ### 10. Pages & Copy
-**Copy is written separately.** Build every page with placeholder copy pulled from one file (e.g., `src/content/copy.ts`), so final copy can be dropped in without touching components.
+**Copy is written separately.** Build every page with placeholder copy from **one file per area** (`src/content/copy/<area>.ts`, re-exported from `src/content/copy/index.ts`; Step 10), so final copy can be dropped in without touching components and parallel tickets don't conflict. **Marketing copy is lorem ipsum** until the Design Pass; plan facts come from `src/content/plans.ts`. No CMS in MVP.
 
 #### Public pages
 - [ ] **Landing page** (`/`)
@@ -827,8 +866,8 @@ Full rules: "Step 9 Decisions"; the why: `context/versions-scheduling.md`. Ticke
   - Pricing section (or link to `/pricing`); Team shown as "Coming soon"
   - FAQ (incl. "Does this change my Buffer drafts?" and "What happens to my posts on Free?")
   - Footer: Privacy, Terms, contact
-- [ ] **Pricing** (`/pricing`): 3 tiers, feature comparison, Creator CTA → Stripe Checkout, Team "Coming soon"
-- [ ] **Privacy Policy** (`/privacy`) and **Terms** (`/terms`): needed for the Buffer OAuth app client and Stripe
+- [ ] **Pricing** (`/pricing`): 3 tiers, feature comparison from `src/content/plans.ts` (**no stretch rows**; Step 10), Creator CTA → Stripe Checkout, Team "Coming soon"
+- [ ] **Privacy Policy** (`/privacy`) and **Terms** (`/terms`): needed for the production Buffer OAuth app client; agent-drafted plain-language text, human-reviewed (H8); live only after the demo-day release
 - [ ] **404 / error page**
 
 #### Auth pages
@@ -852,7 +891,7 @@ Full rules: "Step 9 Decisions"; the why: `context/versions-scheduling.md`. Ticke
 - [ ] Empty states (no posts yet, no custom personas yet, no Buffer drafts to import)
 - [ ] Loading states
 - [ ] Limit-reached states with upgrade prompts
-- [ ] First-run welcome: point new users to the sample post (from seed data) so they hear a persona within the first minute
+- [ ] First-run welcome: a card on `/app` while the user has only the sample post (created by `ensureSamplePost` on sign-up, not seed data) so they hear a persona within the first minute
 
 ### 11. Demo & Pitch
 - [ ] Demo script (runs on localhost:3000; checklist in `context/environments.md`): Sign in with Buffer (Free) → hit limit → Stripe upgrade → custom persona → review post → schedule (Pick a time, 1 week out, test channel) → Move back to draft
@@ -950,6 +989,13 @@ Buffer's API has **no upload endpoint**. Images must be hosted by us at a **publ
 
 ### Voice
 - [ ] Native Wispr Flow integration (API requires enterprise access)
+
+### Pages (added in Step 10)
+- [ ] Payload CMS for marketing copy (needs a separate Next.js app; MVP uses `src/content/copy/*`)
+- [ ] "Restore sample post" after deleting it
+- [ ] Dashboard pagination, search, and filters
+- [ ] OG images / social share cards
+- [ ] Stretch-feature rows on `/pricing` ("Coming soon")
 
 ---
 

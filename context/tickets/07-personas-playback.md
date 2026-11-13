@@ -155,7 +155,7 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 
 **Plan behavior:** as above.
 **Blocked by:** V2, V13 (list fn); Step 6 C1.
-**Files likely touched:** `src/components/PersonaPicker/*`, `src/server/personas/list.ts`, `src/content/copy.ts`, `e2e/personas.spec.ts`
+**Files likely touched:** `src/components/PersonaPicker/*`, `src/server/personas/list.ts`, `src/content/copy/personas.ts`, `e2e/personas.spec.ts`
 **Out of scope:** reactions (Step 8), the upgrade button target (V12 reuses P4).
 
 ---
@@ -171,7 +171,7 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 
 **Plan behavior:** same buttons on every plan; limits enforced server-side (V7).
 **Blocked by:** V7, V8, V9; Step 6 C4, C8.
-**Files likely touched:** `src/components/ReadAloud/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/playback.spec.ts`
+**Files likely touched:** `src/components/ReadAloud/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy/personas.ts`, `e2e/playback.spec.ts`
 **Out of scope:** usage meter refresh beyond calling P15's refresh hook if merged; the Free review-cost note (Step 8 R11 adds it so V10 isn't blocked on Step 8).
 
 ---
@@ -202,7 +202,7 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 
 **Plan behavior:** as above.
 **Blocked by:** V13; Step 5 P4, P14; Step 3 S10.
-**Files likely touched:** `src/routes/app/personas/index.tsx`, `src/components/PersonaCard/*`, `src/content/copy.ts`, `e2e/personas.spec.ts`
+**Files likely touched:** `src/routes/app/personas/index.tsx`, `src/components/PersonaCard/*`, `src/content/copy/personas.ts`, `e2e/personas.spec.ts`
 **Out of scope:** builder form (V14), delete (V15).
 
 ---

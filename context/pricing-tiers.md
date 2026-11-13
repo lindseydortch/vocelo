@@ -32,7 +32,7 @@
 | Schedule in Buffer (queue or picked time) | ✓ | ✓ | ✓ + reviewer approvals* |
 | Brand persona pack* | ✗ | ✗ | ✓ |
 
-\* Stretch feature — show as "coming soon" on the pricing page if not built.
+\* Stretch feature — **left off** the `/pricing` table until built (Step 10). Only the Team column says "Coming soon".
 
 *"Full read" assumes an ~800-character post (typical LinkedIn length).*
 

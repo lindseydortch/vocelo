@@ -11,7 +11,7 @@ After Step 3 S4 + S9 (Buffer client + retry) and Step 1 T2/T6:
     → B9 save existing draft (needs B8) → B10 save as a new draft (needs B9)
     → B11 save button + messages (needs B9, Step 6 C1 + C4) · B12 status sync on open (needs B3, Step 6 C1)
     → B13 import list (needs B5) → B14 import action (needs B6, B13) → B15 import UI (needs B14)
-    → B16 dashboard status badges (needs B1, Step 10 dashboard placeholder)
+    → B16 dashboard status badges (needs B1, Step 9 K3, Step 10 G7)
 ```
 B1 is the only Step 4 migration. Merge it before any other ticket that touches the schema (two lanes generating the same migration number is caught by "up to date before merging").
 
@@ -123,7 +123,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 
 **Plan behavior:** same on every plan.
 **Blocked by:** B5, Step 6 C1 (composer route).
-**Files likely touched:** `src/routes/app/posts/new.tsx`, `src/components/ChannelPicker/*`, `src/server/posts/create-post.ts`, `src/content/copy.ts`, `e2e/new-post.spec.ts`
+**Files likely touched:** `src/routes/app/posts/new.tsx`, `src/components/ChannelPicker/*`, `src/server/posts/create-post.ts`, `src/content/copy/buffer.ts`, `e2e/new-post.spec.ts`
 **Out of scope:** visual design, editor itself (Step 6).
 
 ---
@@ -180,14 +180,14 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 **Labels:** `MVP`, `buffer`, `composer`
 **Acceptance criteria**
 - [ ] "Save draft" in the composer is disabled while saving, while over the character limit, and when the channel is unavailable ("Reconnect this channel in Buffer, then reopen")
-- [ ] Messages from `src/content/copy.ts`: Saved · Already saved · Recreated in Buffer · Buffer isn't responding (+ seconds from `retryAfter`) · Buffer's `MutationError` text verbatim · "You've saved a lot this hour. Try again in N minutes."
+- [ ] Messages from `src/content/copy/buffer.ts`: Saved · Already saved · Recreated in Buffer · Buffer isn't responding (+ seconds from `retryAfter`) · Buffer's `MutationError` text verbatim · "You've saved a lot this hour. Try again in N minutes."
 - [ ] `NOT_A_DRAFT` shows the status (and Buffer's error) with a "Save as a new draft" button (B10)
 - [ ] "📎 N attachments, edit them in Buffer" when the Buffer post has attachments
 - [ ] E2E (Buffer mocked): save → Saved; scheduled → Save as a new draft. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
 **Blocked by:** B9, B10, Step 6 C1 (route) + C4 (`flush()` before saving).
-**Files likely touched:** `src/components/SaveDraft/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/save-draft.spec.ts`
+**Files likely touched:** `src/components/SaveDraft/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy/buffer.ts`, `e2e/save-draft.spec.ts`
 **Out of scope:** reconnect dialog (Step 6), visual design.
 
 ---
@@ -248,9 +248,9 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): import a draft → lands in composer; empty state. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B14, Step 10 dashboard placeholder (or a minimal `/app` from S10).
-**Files likely touched:** `src/components/ImportPanel/*`, `src/routes/app/index.tsx`, `src/content/copy.ts`, `e2e/import.spec.ts`
-**Out of scope:** dashboard post list (Step 10), visual design.
+**Blocked by:** B14, Step 10 G7 (dashboard post list).
+**Files likely touched:** `src/components/ImportPanel/*`, `src/routes/app/index.tsx`, `src/content/copy/buffer.ts`, `e2e/import.spec.ts`
+**Out of scope:** dashboard post list (Step 10 G7), visual design.
 
 ---
 
@@ -263,8 +263,8 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B1, Step 9 K3 (time formatter), Step 10 dashboard placeholder.
-**Files likely touched:** `src/components/StatusBadge/*`, `src/lib/buffer-status.ts`, `src/content/copy.ts`, `e2e/dashboard.spec.ts`
+**Blocked by:** B1, Step 9 K3 (time formatter), Step 10 G7 (dashboard post list).
+**Files likely touched:** `src/components/StatusBadge/*`, `src/lib/buffer-status.ts`, `src/content/copy/buffer.ts`, `e2e/dashboard.spec.ts`
 **Out of scope:** refreshing statuses in bulk (never), visual design.
 
 ---

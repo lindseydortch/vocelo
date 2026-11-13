@@ -178,14 +178,14 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 **Labels:** `MVP`, `auth`, `pages`
 **Acceptance criteria**
 - [ ] `/signin` shows one "Sign in with Buffer" button linking to `/auth/buffer/start`, passing `returnTo` through
-- [ ] One line on what Vocelo can access (read account, read + write posts), from `src/content/copy.ts`
+- [ ] One line on what Vocelo can access (read account, read + write posts), from `src/content/copy/auth.ts`
 - [ ] `?reason=expired` shows "Your Buffer connection expired. Sign in again."
 - [ ] E2E: button href includes `returnTo`; expired banner renders
 - [ ] Works on desktop 1280px+, placeholder styling only
 
 **Plan behavior:** none.
 **Blocked by:** S5, S10.
-**Files likely touched:** `src/routes/signin.tsx`, `src/routes/signin.module.scss`, `src/content/copy.ts`, `e2e/auth.spec.ts`
+**Files likely touched:** `src/routes/signin.tsx`, `src/routes/signin.module.scss`, `src/content/copy/auth.ts`, `e2e/auth.spec.ts`
 **Out of scope:** landing page CTA (Step 10), visual design.
 
 ---
@@ -195,13 +195,13 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 **Acceptance criteria**
 - [ ] `/auth/error?reason=` shows one message each for `cancelled`, `timeout`, `exchange`, `account`, `scopes`; unknown/missing reason → the `exchange` message
 - [ ] "Try again" links to `/auth/buffer/start`
-- [ ] Copy lives in `src/content/copy.ts`
+- [ ] Copy lives in `src/content/copy/auth.ts`
 - [ ] E2E: each reason renders its message
 - [ ] Works on desktop 1280px+, placeholder styling only
 
 **Plan behavior:** none.
 **Blocked by:** S5.
-**Files likely touched:** `src/routes/auth/error.tsx`, `src/routes/auth/error.module.scss`, `src/content/copy.ts`, `e2e/auth-error.spec.ts`
+**Files likely touched:** `src/routes/auth/error.tsx`, `src/routes/auth/error.module.scss`, `src/content/copy/auth.ts`, `e2e/auth-error.spec.ts`
 **Out of scope:** retry logic beyond the link.
 
 ---
@@ -232,7 +232,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 
 **Plan behavior:** billing warning shows for Creator, not Free.
 **Blocked by:** S3, S10, S13 (shares the settings placeholder).
-**Files likely touched:** `src/server/auth/disconnect.ts`, `src/routes/app/settings/index.tsx`, `src/content/copy.ts`, tests
+**Files likely touched:** `src/server/auth/disconnect.ts`, `src/routes/app/settings/index.tsx`, `src/content/copy/auth.ts`, tests
 **Out of scope:** cancelling Stripe, account deletion (stretch).
 
 ---

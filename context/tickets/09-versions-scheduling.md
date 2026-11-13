@@ -101,13 +101,13 @@ Cut order if time runs out: K9's locked "N older versions" line first (keep the 
 **Acceptance criteria**
 - [ ] "Schedule in Buffer" next to Save draft; disabled with the same reasons as Save draft (B11). Opens a modal: radio **Add to queue** (default) / **Pick a time** (`datetime-local`, default `defaultDueAt`, zone label from `resolveTimeZone`), client-side `validateDueAt` messages, paused-queue warning when known
 - [ ] Confirm calls `flush()` then K4; button "Scheduling…" + disabled while running
-- [ ] Result messages from `copy.ts`: "Scheduled for {time}" · "Queued for {time}" · "Added to your Buffer queue" · "Sent for approval in Buffer." · "Saved as a draft in Buffer, but couldn't schedule: {reason}" · queue-full message · cap message (B6)
+- [ ] Result messages from `copy/versions.ts`: "Scheduled for {time}" · "Queued for {time}" · "Added to your Buffer queue" · "Sent for approval in Buffer." · "Saved as a draft in Buffer, but couldn't schedule: {reason}" · queue-full message · cap message (B6)
 - [ ] Cmd/Ctrl+S never opens or submits the dialog
 - [ ] Component tests for each message; E2E (Buffer mocked): Pick a time → "Scheduled for…". Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
 **Blocked by:** K4, Step 4 B11, Step 6 C4.
-**Files likely touched:** `src/components/ScheduleDialog/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/schedule.spec.ts`
+**Files likely touched:** `src/components/ScheduleDialog/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy/versions.ts`, `e2e/schedule.spec.ts`
 **Out of scope:** share now / share next / change time (stretch), visual design.
 
 ---
@@ -116,13 +116,13 @@ Cut order if time runs out: K9's locked "N older versions" line first (keep the 
 **Labels:** `MVP`, `scheduling`, `composer`
 **Acceptance criteria**
 - [ ] For `scheduled`, C10's banner action slot shows **Move back to draft** before "Save as a new draft"; calls K5; disabled while running
-- [ ] Messages from `copy.ts` per K5 result: moved → banner disappears + "Back to a draft in Buffer" · "Already a draft." · "It's already posting or posted. Save as a new draft instead." · "This post isn't in Buffer anymore. Save draft to create a new one."
+- [ ] Messages from `copy/versions.ts` per K5 result: moved → banner disappears + "Back to a draft in Buffer" · "Already a draft." · "It's already posting or posted. Save as a new draft instead." · "This post isn't in Buffer anymore. Save draft to create a new one."
 - [ ] Paused-queue warning in the banner when the post is scheduled and K1 reports `isQueuePaused`
 - [ ] E2E (Buffer mocked): schedule → banner "Scheduled for…" → Move back to draft → Save draft enabled again. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
 **Blocked by:** K1, K5, Step 6 C10.
-**Files likely touched:** `src/components/BufferStatusBanner/*`, `src/content/copy.ts`, `e2e/schedule.spec.ts`
+**Files likely touched:** `src/components/BufferStatusBanner/*`, `src/content/copy/versions.ts`, `e2e/schedule.spec.ts`
 **Out of scope:** the per-status banner text (C10), visual design.
 
 ---
@@ -154,7 +154,7 @@ Cut order if time runs out: K9's locked "N older versions" line first (keep the 
 
 **Plan behavior:** Free newest 3 + locked line; Creator all.
 **Blocked by:** K8, Step 6 C1, Step 5 P4.
-**Files likely touched:** `src/components/VersionPanel/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/versions.spec.ts`
+**Files likely touched:** `src/components/VersionPanel/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy/versions.ts`, `e2e/versions.spec.ts`
 **Out of scope:** Restore (K10), diff view (stretch).
 
 ---
@@ -170,7 +170,7 @@ Cut order if time runs out: K9's locked "N older versions" line first (keep the 
 
 **Plan behavior:** same on every plan (Free can only reach visible versions).
 **Blocked by:** K9, Step 6 C4.
-**Files likely touched:** `src/components/VersionPanel/*`, `src/components/Editor/*`, `src/content/copy.ts`, `e2e/versions.spec.ts`
+**Files likely touched:** `src/components/VersionPanel/*`, `src/components/Editor/*`, `src/content/copy/versions.ts`, `e2e/versions.spec.ts`
 **Out of scope:** diff view, restoring into Buffer directly (always via Save draft).
 
 ---

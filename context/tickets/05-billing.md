@@ -8,8 +8,8 @@ After Step 1 T2/T4/T6/T7, Step 2 I13/I14, Step 3 S3/S10:
   P1 Stripe client · P9 usage summary · P14 billing test presets       (parallel, max 3 worktrees)
     → P2 applySubscription (needs P1) → P3 webhook (needs P2) · P4 checkout session (needs P1)
     → P5 success page (needs P2, P4) · P6 canceled page · P7 portal (needs P1)
-    → P8 pricing CTAs (needs P4, P7) · P10 billing settings (needs P7, P9)
-    → P11 past_due banner (needs P10) · P12 limit-reached prompt (needs P4, P9) · P13 locked teaser (needs P4) · P15 composer meter (needs P9, Step 6 C1)
+    → P8 pricing CTAs (needs P4, P7, Step 10 G1) · P10 billing settings (needs P7, P9)
+    → P11 past_due banner (needs P7, P9, Step 10 G3) · P12 limit-reached prompt (needs P4, P9) · P13 locked teaser (needs P4, Step 10 G7) · P15 composer meter (needs P9, Step 6 C1)
 ```
 No Step 5 migration: the schema already has every billing column.
 
@@ -90,7 +90,7 @@ No Step 5 migration: the schema already has every billing column.
 
 **Plan behavior:** turns Free into Creator immediately when paid.
 **Blocked by:** P2, P4.
-**Files likely touched:** `src/routes/app/billing/success.tsx`, `src/server/billing/sync-checkout.ts`, `src/content/copy.ts`, tests, `e2e/upgrade.spec.ts`
+**Files likely touched:** `src/routes/app/billing/success.tsx`, `src/server/billing/sync-checkout.ts`, `src/content/copy/billing.ts`, tests, `e2e/upgrade.spec.ts`
 **Out of scope:** visual design.
 
 ---
@@ -100,12 +100,12 @@ No Step 5 migration: the schema already has every billing column.
 **Acceptance criteria**
 - [ ] `/app/billing/canceled` shows "No changes made" and a link back to `/pricing`
 - [ ] Writes nothing (integration test: user row unchanged)
-- [ ] Copy in `src/content/copy.ts`; E2E: page renders, link works
+- [ ] Copy in `src/content/copy/billing.ts`; E2E: page renders, link works
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** none.
 **Blocked by:** Step 3 S10.
-**Files likely touched:** `src/routes/app/billing/canceled.tsx`, `src/content/copy.ts`, `e2e/upgrade.spec.ts`
+**Files likely touched:** `src/routes/app/billing/canceled.tsx`, `src/content/copy/billing.ts`, `e2e/upgrade.spec.ts`
 **Out of scope:** visual design.
 
 ---
@@ -135,9 +135,9 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] E2E: each of signed out, `free`, `creator` (Stripe mocked). Works on desktop 1280px+
 
 **Plan behavior:** CTA differs by plan as above.
-**Blocked by:** P4, P7, Step 10 pricing placeholder (or a minimal `/pricing`).
-**Files likely touched:** `src/routes/pricing.tsx`, `src/components/PlanCta/*`, `src/content/copy.ts`, `e2e/pricing.spec.ts`
-**Out of scope:** pricing page layout + copy (Step 10).
+**Blocked by:** P4, P7, Step 10 G1 (public route stubs).
+**Files likely touched:** `src/routes/pricing.tsx`, `src/components/PlanCta/*`, `src/content/copy/billing.ts`, `e2e/pricing.spec.ts`
+**Out of scope:** pricing comparison table (Step 10 G13), landing plan cards (G14).
 
 ---
 
@@ -166,7 +166,7 @@ No Step 5 migration: the schema already has every billing column.
 
 **Plan behavior:** buttons and meters as above.
 **Blocked by:** P7, P9, P14.
-**Files likely touched:** `src/routes/app/settings/billing.tsx`, `src/components/UsageMeter/*`, `src/content/copy.ts`, `e2e/billing.spec.ts`
+**Files likely touched:** `src/routes/app/settings/billing.tsx`, `src/components/UsageMeter/*`, `src/content/copy/billing.ts`, `e2e/billing.spec.ts`
 **Out of scope:** past_due banner (P11), visual design.
 
 ---
@@ -174,14 +174,14 @@ No Step 5 migration: the schema already has every billing column.
 ## P11 · `feat: payment failed banner`
 **Labels:** `MVP`, `billing`
 **Acceptance criteria**
-- [ ] When `pastDue`, Billing settings and the composer show "Your last payment failed. Update your card to keep Creator." with a "Update card" button (P7)
+- [ ] When `pastDue`, **every `/app/*` page** shows (rendered once by the Step 10 G3 app shell, changed in Step 10) "Your last payment failed. Update your card to keep Creator." with a "Update card" button (P7)
 - [ ] Not shown for any other status
-- [ ] E2E: `creator-past-due` sees it on both pages; `creator` doesn't
+- [ ] E2E: `creator-past-due` sees it on `/app`, the composer, and billing settings; `creator` doesn't
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** past_due keeps Creator; banner only.
-**Blocked by:** P10, Step 6 C1 (composer route).
-**Files likely touched:** `src/components/PastDueBanner/*`, `src/routes/app/settings/billing.tsx`, `src/routes/app/posts/$id.tsx`, `e2e/billing.spec.ts`
+**Blocked by:** P7, P9, Step 10 G3 (app shell).
+**Files likely touched:** `src/components/PastDueBanner/*`, `src/components/AppShell/*`, `e2e/billing.spec.ts`
 **Out of scope:** emails (Stripe sends its own).
 
 ---
@@ -189,7 +189,7 @@ No Step 5 migration: the schema already has every billing column.
 ## P12 · `feat: limit-reached prompt`
 **Labels:** `MVP`, `billing`
 **Acceptance criteria**
-- [ ] `LimitReached` component maps typed usage errors (`posts`, `chars` with `needed` / `remaining`, `rate`) to messages from `copy.ts`
+- [ ] `LimitReached` component maps typed usage errors (`posts`, `chars` with `needed` / `remaining`, `rate`) to messages from `copy/billing.ts`
 - [ ] Free: "Upgrade to Creator" → P4; Creator out of characters: "Resets {date}", no upgrade button; `rate`: "Try again in N minutes" on every plan
 - [ ] Cached audio and existing reactions stay playable/visible while it shows
 - [ ] E2E: `free-at-limit` asks for a new read → prompt → Checkout redirect (mocked); `free-low-chars` sees "800 characters needed, 500 left"
@@ -197,7 +197,7 @@ No Step 5 migration: the schema already has every billing column.
 
 **Plan behavior:** as above.
 **Blocked by:** P4, P9; Step 7 V7, V10 (wiring point).
-**Files likely touched:** `src/components/LimitReached/*`, `src/content/copy.ts`, `e2e/limits.spec.ts`
+**Files likely touched:** `src/components/LimitReached/*`, `src/content/copy/billing.ts`, `e2e/limits.spec.ts`
 **Out of scope:** character top-ups (stretch).
 
 ---
@@ -212,8 +212,8 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above. First item to cut if time runs out.
-**Blocked by:** P4, Step 1 T7, Step 10 dashboard placeholder.
-**Files likely touched:** `src/server/posts/locked-count.ts`, `src/components/LockedTeaser/*`, `src/content/copy.ts`, tests
+**Blocked by:** P4, Step 1 T7, Step 10 G7 (dashboard post list).
+**Files likely touched:** `src/server/posts/locked-count.ts`, `src/components/LockedTeaser/*`, `src/content/copy/billing.ts`, tests
 **Out of scope:** deleting locked posts (stretch).
 
 ---
@@ -252,6 +252,6 @@ No Step 5 migration: the schema already has every billing column.
 ## Noted for later steps (not drafted here)
 - ~~**Free 1-persona-per-post after downgrade**~~ → removed in Step 8 (Free gets all 3 standard personas)
 - **Custom personas locked on downgrade** (exercised by `free-downgraded`) → Step 7 (Personas)
-- **Pricing page layout + copy, dashboard placement of the teaser card** → Step 10
+- ~~**Pricing page layout + copy, dashboard placement of the teaser card**~~ → drafted in Step 10 (G7, G13, G14)
 - **Demo script:** sign in as `free` → hit limit → Checkout with 4242 → success page → custom persona → Step 11
 - **Stretch:** Team checkout, trials, annual plans, promo codes, character top-ups, live keys, seeding real Stripe test customers, auto-checkout after sign-in

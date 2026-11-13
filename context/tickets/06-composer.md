@@ -23,7 +23,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 - [ ] `/app/posts/$id` loader returns the post only if it belongs to `requireUser()` and passes `visiblePostsWhere` (T7); another user's or a missing post → 404
 - [ ] A post that exists but is outside the history window → redirect to `/app` with "This post is locked on your plan"
 - [ ] Loader returns `readOnly: true` for `is_sample` posts
-- [ ] Two-column layout (`1fr 36rem`) with named slots: left (channel, editor, counter, save, hint), right (persona panel), top (banners, meter); placeholder text in each slot; copy from `src/content/copy.ts`
+- [ ] Two-column layout (`1fr 36rem`) with named slots: left (channel, editor, counter, save, hint), right (persona panel), top (banners, meter); placeholder text in each slot; copy from `src/content/copy/composer.ts`
 - [ ] Integration tests for each loader branch; E2E: own post opens, other user's post 404s. Works on desktop 1280px+
 
 **Plan behavior:** Free and Creator differ only through `visiblePostsWhere` (30 days vs 12 months); the sample post never locks.
@@ -76,7 +76,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C1, C3.
-**Files likely touched:** `src/components/Editor/*`, `src/hooks/useComposerText.ts`, `src/hooks/useComposerText.test.ts`, `src/content/copy.ts`, `e2e/composer.spec.ts`
+**Files likely touched:** `src/components/Editor/*`, `src/hooks/useComposerText.ts`, `src/hooks/useComposerText.test.ts`, `src/content/copy/composer.ts`, `e2e/composer.spec.ts`
 **Out of scope:** local backup (C5), conflict UI (C6), counter (C7).
 
 ---
@@ -107,7 +107,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C4.
-**Files likely touched:** `src/components/ConflictPrompt/*`, `src/hooks/useComposerText.ts`, `src/content/copy.ts`, `e2e/composer-conflict.spec.ts`
+**Files likely touched:** `src/components/ConflictPrompt/*`, `src/hooks/useComposerText.ts`, `src/content/copy/composer.ts`, `e2e/composer-conflict.spec.ts`
 **Out of scope:** merging text (never).
 
 ---
@@ -122,7 +122,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C4; Step 4 B2.
-**Files likely touched:** `src/components/CharCounter/*`, `src/content/copy.ts`
+**Files likely touched:** `src/components/CharCounter/*`, `src/content/copy/composer.ts`
 **Out of scope:** counting rules (B2), blocking the save (B11).
 
 ---
@@ -152,7 +152,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C5; Step 3 S5, S9.
-**Files likely touched:** `src/components/SignedOutDialog/*`, `src/hooks/useComposerText.ts`, `src/content/copy.ts`, `e2e/composer-signed-out.spec.ts`
+**Files likely touched:** `src/components/SignedOutDialog/*`, `src/hooks/useComposerText.ts`, `src/content/copy/composer.ts`, `e2e/composer-signed-out.spec.ts`
 **Out of scope:** token refresh (S8), sign-in pages (S11, S12).
 
 ---
@@ -161,7 +161,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 *(Updated in Step 9: one message per status.)*
 **Labels:** `MVP`, `composer`, `buffer`
 **Acceptance criteria**
-- [ ] When `buffer_status` is not `draft`, C1's top slot shows one message per status (from `copy.ts`): `scheduled` → "Scheduled for {due_at via Step 9 K3 `formatInZone`}. Edits here won't change it." · `needs_approval` → "Waiting for approval in Buffer." · `sending` → "Posting now." · `sent` → "Posted." · `error` → Buffer's `error.message`
+- [ ] When `buffer_status` is not `draft`, C1's top slot shows one message per status (from `copy/composer.ts`): `scheduled` → "Scheduled for {due_at via Step 9 K3 `formatInZone`}. Edits here won't change it." · `needs_approval` → "Waiting for approval in Buffer." · `sending` → "Posting now." · `sent` → "Posted." · `error` → Buffer's `error.message`
 - [ ] The banner has an action slot: Step 9 K7 puts "Move back to draft" there for `scheduled`; B11's "Save as a new draft" goes after it
 - [ ] Text stays editable and autosaves
 - [ ] No banner for `draft`, no Buffer post, or the sample post
@@ -169,7 +169,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C1; Step 4 B12; Step 9 K3.
-**Files likely touched:** `src/components/BufferStatusBanner/*`, `src/lib/buffer-status.ts`, `src/content/copy.ts`
+**Files likely touched:** `src/components/BufferStatusBanner/*`, `src/lib/buffer-status.ts`, `src/content/copy/composer.ts`
 **Out of scope:** the "Save as a new draft" button (B11), the "Move back to draft" button (Step 9 K7), the paused-queue warning (Step 9 K7).
 
 ---
@@ -197,7 +197,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan.
 **Blocked by:** C4.
-**Files likely touched:** `src/components/DictationHint/*`, `src/content/copy.ts`
+**Files likely touched:** `src/components/DictationHint/*`, `src/content/copy/composer.ts`
 **Out of scope:** built-in voice-to-text (stretch).
 
 ---
@@ -212,7 +212,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan. Deleting never refunds usage.
 **Blocked by:** C1.
-**Files likely touched:** `src/server/posts/delete-post.ts`, `src/server/posts/delete-post.test.ts`, `src/components/DeletePost/*`, `src/content/copy.ts`, `e2e/composer.spec.ts`
+**Files likely touched:** `src/server/posts/delete-post.ts`, `src/server/posts/delete-post.test.ts`, `src/components/DeletePost/*`, `src/content/copy/composer.ts`, `e2e/composer.spec.ts`
 **Out of scope:** dashboard row delete (Step 10, reuses this server fn), deleting the Buffer draft (stretch).
 
 ---
@@ -227,7 +227,7 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 
 **Plan behavior:** same on every plan (locking itself depends on the plan's history window).
 **Blocked by:** C4.
-**Files likely touched:** `src/components/PostGone/*`, `src/hooks/useComposerText.ts`, `src/content/copy.ts`, `e2e/composer-gone.spec.ts`
+**Files likely touched:** `src/components/PostGone/*`, `src/hooks/useComposerText.ts`, `src/content/copy/composer.ts`, `e2e/composer-gone.spec.ts`
 **Out of scope:** recovering deleted posts (never).
 
 ---

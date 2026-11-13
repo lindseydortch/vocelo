@@ -8,7 +8,7 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - When an agent ticket needs a human step partway through (paste a key, click through real OAuth), split that step into its own `human` ticket and list it under **Blocked by**. Agents never wait on you mid-ticket.
 - Where each value goes (`.env.local`, Netlify env vars): `context/environments.md`. This file tracks the *work*; that file is the reference.
 
-**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges. H11 runs after Step 8 R3 + R4 merge. H12 ✅ done. H13 before the demo.
+**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H7. **H8 → H5 run on demo day, after the release PR merges** (Step 10: production sign-in isn't needed for the localhost demo). H9 is never blocking. H10 runs after Step 7 V16 merges. H11 runs after Step 8 R3 + R4 merge. H12 ✅ done. H13 before the demo.
 
 ---
 
@@ -65,7 +65,7 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - [ ] Its client ID + secret added to Netlify production env vars
 
 **Blocked by:** H4, H8.
-**Blocks:** the release PR.
+**Blocks:** production sign-in (not the demo, not the release PR). Runs on demo day after the release merges (Step 10).
 
 ---
 
@@ -95,9 +95,10 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 ## H8 · `chore: publish privacy and terms pages`
 **Labels:** `MVP`, `human`, `legal`
 **Acceptance criteria**
-- [ ] `/privacy` and `/terms` reachable at real public URLs (Buffer app client + Stripe need them)
+- [ ] Read the drafted Privacy and Terms text (Step 10 G15) and fix anything wrong about how your data is handled
+- [ ] After the release PR merges on demo day: `https://<site>.netlify.app/privacy` and `/terms` load in a signed-out browser
 
-**Blocked by:** none.
+**Blocked by:** Step 10 G15, the release PR.
 **Blocks:** H5.
 
 ---

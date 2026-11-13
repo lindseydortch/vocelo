@@ -36,11 +36,12 @@ Branch protection doesn't exist yet, so the coordinating session does this direc
 - [ ] Dev server is HTTPS via `@vitejs/plugin-basic-ssl`; `npm run dev` (port 3000) and `npm run dev:ticket` (`$PORT` from `.ticket.env`) both work
 - [ ] Prettier config: no semicolons, single quotes; `npm run format` and `format:check`
 - [ ] `npm run typecheck`, `npm run build`, and `npm run verify` (typecheck → build for now) pass
+- [ ] `src/content/copy/index.ts` re-exports one file per area (`auth`, `buffer`, `billing`, `composer`, `personas`, `analysis`, `versions`, `pages`), each starting as an empty `as const` object, so parallel tickets never edit the same copy file (Step 10)
 - [ ] Works on desktop 1280px+: placeholder page renders
 
 **Plan behavior:** none.
 **Blocked by:** B.
-**Files likely touched:** `package.json`, `vite.config.ts`, `tsconfig.json`, `.nvmrc`, `.prettierrc`, `src/routes/__root.tsx`, `src/routes/index.tsx`
+**Files likely touched:** `package.json`, `vite.config.ts`, `tsconfig.json`, `.nvmrc`, `.prettierrc`, `src/routes/__root.tsx`, `src/routes/index.tsx`, `src/content/copy/*`
 **Out of scope:** lint, styles, tests, env validation, Netlify plugin, every other page.
 
 ---

@@ -28,6 +28,10 @@ _Avoid_: Unschedule, cancel
 One connected social account in Buffer (e.g. a LinkedIn page, an X profile) that a Post is written for.
 _Avoid_: Profile, network, platform
 
+**Sample post**:
+A read-only Post every new user starts with, so they can hear Personas before writing anything. It never counts toward limits and never locks; deleting it is permanent.
+_Avoid_: Demo post, example, seed post
+
 **Version**:
 A saved snapshot of a Post's text, created each time the Post is successfully saved to Buffer.
 _Avoid_: Revision, history entry, autosave

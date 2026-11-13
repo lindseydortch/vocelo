@@ -75,3 +75,4 @@ Tracked as `human` tickets H1–H9 in `context/tickets/00-human.md`. This list i
 6. **Scheduling is real.** Before build day, connect a throwaway/test channel to the demo Buffer account (H13). On stage, schedule only to that channel with **Pick a time ~1 week out**, then click **Move back to draft**. Never use Add to queue on a real channel during the demo. After the demo, empty that channel's queue in Buffer (H13).
 7. If ElevenLabs or Anthropic fails mid-demo: set `DEMO_FALLBACK=1`, restart, use the sample post.
 8. After the demo: open + merge the `dev` → `main` release PR; check the production URL; fix production-only bugs.
+9. Then close H8 (`/privacy` + `/terms` live on the production URL) and do H5 (production Buffer app client). Production sign-in works only after H5 (Step 10).

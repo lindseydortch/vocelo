@@ -43,7 +43,7 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 **Acceptance criteria**
 - [ ] A migration inserts 3 standard personas (`user_id = NULL`) with name, bio, `avatar_key`, `elevenlabs_voice_id` and `reader_description` (reaction prompts live in code, Step 8 R3)
 - [ ] Running the migration twice doesn't duplicate rows (fixed UUIDs, `ON CONFLICT DO NOTHING`)
-- [ ] Persona text is placeholder copy, ready to swap from `src/content/copy.ts` or the migration
+- [ ] Persona text is placeholder copy, ready to swap from `src/content/copy/personas.ts` or the migration
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** available on every plan.
