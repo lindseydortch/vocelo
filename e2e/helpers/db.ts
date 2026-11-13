@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import postgres from 'postgres'
 
 try {
@@ -15,6 +16,7 @@ export async function insertPost(options: {
   isSample?: boolean
   bufferPostId?: string
   bufferStatus?: 'draft' | 'scheduled' | 'sent'
+  dueAt?: Date
 }): Promise<string> {
   const sql = postgres(process.env.DATABASE_URL ?? '', { max: 1 })
   try {
@@ -29,8 +31,8 @@ export async function insertPost(options: {
     >`select id, buffer_organization_id from users where buffer_account_id = ${accountId}`
     if (!user) throw new Error(`insertPost: no user ${accountId}`)
     const [post] = await sql<{ id: string }[]>`
-      insert into posts (user_id, buffer_organization_id, channel_id, channel_service, channel_name, text, is_sample, last_edited_at, buffer_post_id, buffer_status)
-      values (${user.id}, ${user.buffer_organization_id}, ${options.isSample ? null : 'chan_e2e'}, 'linkedin', 'E2E LinkedIn', 'An e2e post.', ${options.isSample ?? false}, ${options.lastEditedAt ?? new Date()}, ${options.bufferPostId ?? null}, ${options.bufferStatus ?? null})
+      insert into posts (user_id, buffer_organization_id, channel_id, channel_service, channel_name, text, is_sample, last_edited_at, buffer_post_id, buffer_status, due_at)
+      values (${user.id}, ${user.buffer_organization_id}, ${options.isSample ? null : 'chan_e2e'}, 'linkedin', 'E2E LinkedIn', 'An e2e post.', ${options.isSample ?? false}, ${options.lastEditedAt ?? new Date()}, ${options.bufferPostId ? `${options.bufferPostId}_${randomUUID()}` : null}, ${options.bufferStatus ?? null}, ${options.dueAt ?? null})
       returning id`
     if (!post) throw new Error('insertPost: no row returned')
     return post.id

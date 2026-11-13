@@ -20,6 +20,7 @@ export const loadPost = createServerFn({ method: 'GET' })
           ? sync.dueAt
           : result.post.dueAt
         )?.toISOString() ?? null,
+      errorMessage: sync.status === 'synced' ? sync.errorMessage : null,
       missingInBuffer: sync.status === 'missingInBuffer',
       checkFailed: sync.status === 'unavailable',
     }
@@ -28,5 +29,7 @@ export const loadPost = createServerFn({ method: 'GET' })
       readOnly: result.readOnly,
       post: { id, text, channelName, channelService },
       buffer,
+      timeZone: user.timezone ?? null,
+      isSample: result.post.isSample,
     }
   })

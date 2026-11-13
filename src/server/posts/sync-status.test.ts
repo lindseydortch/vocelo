@@ -88,6 +88,7 @@ describe('syncPostStatus', () => {
       status: 'synced',
       bufferStatus: 'sent',
       dueAt: new Date('2026-11-14T09:00:00.000Z'),
+      errorMessage: null,
     })
     expect(calls.count).toBe(1)
     const row = await stored(post.id)

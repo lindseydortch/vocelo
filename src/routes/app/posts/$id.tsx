@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/react-router'
+import { BufferStatusBanner } from '~/components/BufferStatusBanner/BufferStatusBanner'
 import { composerCopy } from '~/content/copy'
 import { pageTitle } from '~/lib/head'
 import { loadPost } from '~/server/posts/get-post-fn'
@@ -7,12 +8,20 @@ import styles from './$id.module.scss'
 const copy = composerCopy
 
 function ComposerPage() {
-  const { post, readOnly, buffer } = Route.useLoaderData()
+  const { post, readOnly, buffer, timeZone, isSample } = Route.useLoaderData()
   return (
     <main className={styles.page} data-read-only={readOnly}>
       <h1>{copy.title}</h1>
       <div data-slot="composer-top">
-        <div data-slot="banners">{copy.slots.banners}</div>
+        <div data-slot="banners">
+          <BufferStatusBanner
+            status={buffer.missingInBuffer ? null : buffer.status}
+            dueAt={buffer.dueAt}
+            errorMessage={buffer.errorMessage}
+            userTimeZone={timeZone}
+            isSample={isSample}
+          />
+        </div>
         <div data-slot="meter">{copy.slots.meter}</div>
       </div>
       {buffer.checkFailed && <p role="status">{copy.bufferCheckFailed}</p>}
