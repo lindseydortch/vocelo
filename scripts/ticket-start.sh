@@ -4,6 +4,9 @@ set -euo pipefail
 USAGE="Usage: ticket-start.sh <issue#> <slug> [type] [--worktree]"
 ISSUE="${1:?$USAGE}"; SLUG="${2:?$USAGE}"; TYPE="${3:-feat}"; MODE="${4:-}"
 [ "$TYPE" = "--worktree" ] && { TYPE="feat"; MODE="--worktree"; }
+[[ "$ISSUE" =~ ^[0-9]+$ ]] || { echo "❌ Issue must be a number: $ISSUE"; exit 1; }
+[[ "$TYPE" =~ ^[a-z]+$ ]] || { echo "❌ Type must be lowercase letters (feat, chore, fix): $TYPE"; exit 1; }
+[[ "$SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || { echo "❌ Slug must be kebab-case: $SLUG"; exit 1; }
 BRANCH="$TYPE/$ISSUE-$SLUG"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PORT=$((3000 + ISSUE % 1000))

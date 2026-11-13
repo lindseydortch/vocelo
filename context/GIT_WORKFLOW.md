@@ -210,6 +210,9 @@ set -euo pipefail
 USAGE="Usage: ticket-start.sh <issue#> <slug> [type] [--worktree]"
 ISSUE="${1:?$USAGE}"; SLUG="${2:?$USAGE}"; TYPE="${3:-feat}"; MODE="${4:-}"
 [ "$TYPE" = "--worktree" ] && { TYPE="feat"; MODE="--worktree"; }
+[[ "$ISSUE" =~ ^[0-9]+$ ]] || { echo "❌ Issue must be a number: $ISSUE"; exit 1; }
+[[ "$TYPE" =~ ^[a-z]+$ ]] || { echo "❌ Type must be lowercase letters (feat, chore, fix): $TYPE"; exit 1; }
+[[ "$SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || { echo "❌ Slug must be kebab-case: $SLUG"; exit 1; }
 BRANCH="$TYPE/$ISSUE-$SLUG"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PORT=$((3000 + ISSUE % 1000))
@@ -550,9 +553,14 @@ test-results/
   STOP and report it so the human can split it into a `human` ticket that blocks yours.
 - Never start an issue with an unresolved blocker (`./scripts/ticket-next.sh --check <N>` fails).
   Do not work around it, partially implement it, or stub the blocker's code. Report and wait.
+- Starting a ticket: when you're given an issue number (e.g. `/implement #12`) and no `.ticket.env` exists
+  for it, start it yourself with `./scripts/ticket-start.sh <N> <slug> <type>`. Run it from the main folder.
+  `<type>` is the title prefix before the colon (`feat`, `chore`, `fix`); `<slug>` is 2–4 kebab-case words from the rest of the title
+  (letters, digits, hyphens only). If the main folder already has an active `.ticket.env`, add `--worktree`
+  and do all work in the folder it prints. If the script refuses (blocked, human, closed), STOP and report.
 - BEFORE editing, committing, running servers, or opening browsers, run `./scripts/ticket-check.sh`.
   If it fails, STOP and report. Do not try to fix it by switching branches or folders.
-- Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself.
+- Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself (only `ticket-start.sh` does).
 - Never edit files outside your ticket folder (`TICKET_DIR` in `.ticket.env`).
   Never edit the main repo folder when assigned a worktree.
 - Only use the `PORT` and `BROWSER_PROFILE` from `.ticket.env`.

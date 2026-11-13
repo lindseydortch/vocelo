@@ -34,9 +34,14 @@ End every commit message and PR description with its own body text. Leave out al
   STOP and report it so the human can split it into a `human` ticket that blocks yours.
 - Never start an issue with an unresolved blocker (`./scripts/ticket-next.sh --check <N>` fails).
   Do not work around it, partially implement it, or stub the blocker's code. Report and wait.
+- Starting a ticket: when you're given an issue number (e.g. `/implement #12`) and no `.ticket.env` exists
+  for it, start it yourself with `./scripts/ticket-start.sh <N> <slug> <type>`. Run it from the main folder.
+  `<type>` is the title prefix before the colon (`feat`, `chore`, `fix`); `<slug>` is 2–4 kebab-case words from the rest of the title
+  (letters, digits, hyphens only). If the main folder already has an active `.ticket.env`, add `--worktree`
+  and do all work in the folder it prints. If the script refuses (blocked, human, closed), STOP and report.
 - BEFORE editing, committing, running servers, or opening browsers, run `./scripts/ticket-check.sh`.
   If it fails, STOP and report. Do not try to fix it by switching branches or folders.
-- Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself.
+- Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself (only `ticket-start.sh` does).
 - Never edit files outside your ticket folder (`TICKET_DIR` in `.ticket.env`).
   Never edit the main repo folder when assigned a worktree.
 - Only use the `PORT` and `BROWSER_PROFILE` from `.ticket.env`.
