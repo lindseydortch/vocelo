@@ -1,6 +1,8 @@
 // Shared pieces for the reaction and tone prompts. Wording is first-draft
 // (final tuning is H11).
 
+export type Prompt = { system: string; user: string }
+
 const CHANNEL_NAMES: Record<string, string> = {
   linkedin: 'LinkedIn',
   twitter: 'X',

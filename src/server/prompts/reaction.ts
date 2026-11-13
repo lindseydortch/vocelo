@@ -1,4 +1,4 @@
-import { channelPhrase, DATA_RULE, wrap } from './shared'
+import { channelPhrase, DATA_RULE, wrap, type Prompt } from './shared'
 import { STANDARD_PERSONA_PROMPTS } from './standard-personas'
 
 export type ReactionPersona = {
@@ -8,8 +8,6 @@ export type ReactionPersona = {
   userId: string | null
   readerDescription: string
 }
-
-export type Prompt = { system: string; user: string }
 
 const OUTPUT_RULES =
   'Reply with one short reaction of at most 280 characters, in plain text, as this reader would say it. No preamble.'

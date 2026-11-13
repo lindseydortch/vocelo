@@ -53,7 +53,6 @@ describe('buildReactionPrompt (#29)', () => {
       channelService: 'linkedin',
     })
     expect(system).toMatch(/first two lines/i)
-    // full text is still sent
   })
 
   it('sends the full text to The Scroller', () => {
