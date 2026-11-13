@@ -10,7 +10,7 @@ export const composerCopy = {
     hint: 'Hint will live here.',
     persona: 'Persona panel will live here.',
   },
-  bufferCheckFailed: "Couldn't check Buffer just now",
+  bufferCheckFailed: "Couldn't check Buffer just now.",
   missingInBuffer: 'This post is no longer in Buffer.',
   readOnly: 'This sample post is read-only.',
   lockedRedirect: 'This post is locked on your plan',

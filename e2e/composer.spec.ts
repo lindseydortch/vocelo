@@ -63,7 +63,7 @@ test('composer opens with a notice when Buffer is down', async ({ page }) => {
   expect(response?.status()).toBe(200)
   await expect(page.locator('[data-slot="composer-left"]')).toBeVisible()
   await expect(page.getByRole('status')).toHaveText(
-    "Couldn't check Buffer just now",
+    "Couldn't check Buffer just now.",
   )
 })
 
