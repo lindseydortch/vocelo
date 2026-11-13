@@ -39,8 +39,6 @@ export const pagesCopy = {
     },
   },
   pricing: { title: 'Pricing', heading: 'Pricing', body: lorem },
-  privacy: { title: 'Privacy', heading: 'Privacy Policy', body: lorem },
-  terms: { title: 'Terms', heading: 'Terms of Service', body: lorem },
   notFound: {
     title: 'Page not found',
     heading: 'Page not found',

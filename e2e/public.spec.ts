@@ -36,3 +36,27 @@ test('unknown route is not served as a public page', async ({ page }) => {
   const res = await page.goto('/does-not-exist')
   expect(res?.status()).toBe(404)
 })
+
+test('/privacy shows real policy sections and a last-updated date', async ({
+  page,
+}) => {
+  await page.goto('/privacy')
+  await expect(page.getByText(/Last updated: \d{4}-\d{2}-\d{2}/)).toBeVisible()
+  for (const name of [
+    'What we store',
+    'Who processes your data',
+    'Deleting your data',
+  ]) {
+    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
+  }
+  await expect(page.getByText('ElevenLabs: turns text')).toBeVisible()
+  await expect(page.getByText(/lorem ipsum/i)).toHaveCount(0)
+})
+
+test('/terms shows real terms sections', async ({ page }) => {
+  await page.goto('/terms')
+  for (const name of ['No warranty', 'Acceptable use', 'Billing']) {
+    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
+  }
+  await expect(page.getByText(/lorem ipsum/i)).toHaveCount(0)
+})
