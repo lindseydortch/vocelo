@@ -4,7 +4,8 @@
 ## Read before doing anything
 1. `context/project-bible.md`: **source of truth** for scope, stack, decisions, pages, and infra
 2. `context/pricing-tiers.md`: plans, usage limits, history window
-3. `context/GIT_WORKFLOW.md`: branching, worktrees, ticket scripts, agent rules
+3. `context/GIT_WORKFLOW.md`: branching, worktrees, ticket scripts, agent rules, who merges
+4. `context/environments.md`: which keys, database, and providers each environment uses
 
 Don't duplicate these docs. If they conflict, **ask the human**; don't pick one silently.
 

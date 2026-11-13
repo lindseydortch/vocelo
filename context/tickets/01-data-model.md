@@ -1,6 +1,6 @@
 # Step 1 Tickets: Open decisions + data model
 
-Drafts for GitHub Issues (no remote yet). Decisions live in `project-bible.md` → "Step 1 Decisions". Vocabulary: `GLOSSARY.md`.
+Drafts for GitHub Issues. Decisions live in `project-bible.md` → "Step 1 Decisions". Vocabulary: `GLOSSARY.md`.
 
 **Merge order:** T1 → T2 → (T3, T4, T5, T7, T8 in parallel) → T6.
 T2 changes the schema and migrations. Merge it alone before any other ticket that touches `src/db/`.
@@ -10,13 +10,13 @@ T2 changes the schema and migrations. Merge it alone before any other ticket tha
 ## T1 · `chore: Drizzle migration tooling`
 **Labels:** `MVP`, `infra`, `database`
 **Acceptance criteria**
-- [ ] `drizzle-orm`, `drizzle-kit` and `@neondatabase/serverless` are installed, and `src/db/client.ts` exports a server-only `db`
+- [ ] `drizzle-orm`, `drizzle-kit` and `postgres` (postgres.js) are installed, and `src/db/client.ts` exports a server-only `db` (driver changed in Step 2)
 - [ ] `npm run db:generate` and `npm run db:migrate` work against the Neon `dev` branch using `DATABASE_URL`
 - [ ] Importing `src/db/client.ts` from client code fails the build (server-only guard)
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none.
-**Dependencies:** repo scaffold (Step 2), Neon project with a `dev` branch.
+**Dependencies:** I1 scaffold + I4 env validation (Step 2), Neon project with a `dev` branch.
 **Files likely touched:** `package.json`, `drizzle.config.ts`, `src/db/client.ts`, `.env.example`
 **Out of scope:** tables, seed script, production branch wiring.
 

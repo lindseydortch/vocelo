@@ -27,7 +27,7 @@
 ## Two Ways to Work
 
 ### Mode A: Solo, one ticket at a time (simplest)
-- Work in the main folder `~/code/vocelo`.
+- Work in the main folder `~/Documents/personal-dev/buffer-commit/vocelo`.
 - One ticket branch checked out at a time. To switch: commit (or `git stash`), then `git switch <branch>`.
 - Start with `./scripts/ticket-start.sh 12 stripe-checkout feat`
 
@@ -36,8 +36,8 @@ Use this when working on several tickets at once, or when running more than one 
 
 **Folder layout:**
 ```
-~/code/vocelo/                         ← main folder: stays on `dev`, NO ticket work happens here
-~/code/vocelo-worktrees/
+~/Documents/personal-dev/buffer-commit/vocelo/                         ← main folder: stays on `dev`, NO ticket work happens here
+~/Documents/personal-dev/buffer-commit/vocelo-worktrees/
     12-stripe-checkout/                ← issue #12 only (branch feat/12-stripe-checkout)
     15-persona-picker/                 ← issue #15 only (branch feat/15-persona-picker)
 ```
@@ -65,9 +65,9 @@ Use this when working on several tickets at once, or when running more than one 
 # Mode A (solo)
 ./scripts/ticket-start.sh 12 stripe-checkout feat
 
-# Mode B (parallel), run from ~/code/vocelo
+# Mode B (parallel), run from ~/Documents/personal-dev/buffer-commit/vocelo
 ./scripts/ticket-start.sh 12 stripe-checkout feat --worktree
-cd ~/code/vocelo-worktrees/12-stripe-checkout
+cd ~/Documents/personal-dev/buffer-commit/vocelo-worktrees/12-stripe-checkout
 ```
 The script creates the branch from the latest `dev`, pushes it, and writes `.ticket.env` with this issue's **branch, folder, port** (`3000 + issue #`) and **browser profile**.
 
@@ -96,7 +96,10 @@ This confirms you're in the right folder, on the right branch, for the right iss
 - Fill in the PR template's **Testing** section (what's tested, how to verify manually).
 - **CI must pass. GitHub blocks the merge otherwise** (required status checks): typecheck → lint → unit + integration tests with coverage → build → Playwright E2E.
 - **No tests, no merge.** A PR that adds or changes behavior without tests gets sent back, even if CI is green.
-- Review it yourself (including the tests), then **squash merge.**
+- **Merging (never `git merge` locally; merges only happen on GitHub):**
+  - Ticket agents never merge.
+  - The **coordinating Claude session** (main folder, on `dev`) reviews the PR including its tests, waits for CI to go green, then runs `gh pr merge <PR#> --squash`, then `./scripts/ticket-cleanup.sh <issue>`.
+  - If `dev` moved and the PR isn't up to date, rebase the ticket branch (`git rebase origin/dev` in its worktree), push with `--force-with-lease`, and let CI rerun.
 
 ---
 
@@ -117,7 +120,8 @@ This confirms you're in the right folder, on the right branch, for the right iss
 - Every acceptance criterion in the ticket maps to at least one test
 
 ### Rules
-- **Tests never call real external services.** Mock Buffer, Stripe, ElevenLabs, the LLM, and R2 (e.g., with MSW). Use seeded data from `npm run seed`.
+- **Tests never call real external services.** Mock Buffer, Stripe, ElevenLabs, the LLM, and R2 with MSW (unhandled requests fail the test).
+- **Tests never touch Neon.** Vitest runs against `embedded-postgres` (a throwaway database per run) and builds data with the test factories. `npm run seed` is only for the Neon `dev` branch you click around in.
 - **Stripe webhooks:** test with signed fixture events (valid signature, invalid signature, each event type handled).
 - **No skipped or focused tests:** `.skip` and `.only` fail lint.
 - **No flaky tests:** a test that fails intermittently gets fixed or removed in the same PR, never ignored.
@@ -134,7 +138,7 @@ This confirms you're in the right folder, on the right branch, for the right iss
 
 ### 5. Clean up (after the PR is merged)
 ```bash
-# Run from the MAIN folder (~/code/vocelo), passing the issue number
+# Run from the MAIN folder (~/Documents/personal-dev/buffer-commit/vocelo), passing the issue number
 ./scripts/ticket-cleanup.sh 12
 ```
 This:
@@ -150,6 +154,7 @@ This:
 6. Deletes the branch locally **and** on GitHub, then prunes stale references
 
 ### 6. Release (`dev` to `main`)
+- **Hackathon plan: one release PR**, opened and merged by the human on demo day after the app works on localhost. `main` is the only branch Netlify deploys.
 - Open a PR from `dev` into `main` titled `release: vX.Y.Z`
 - Merge with a **merge commit** (not squash)
 - Tag it: `git tag vX.Y.Z && git push origin vX.Y.Z`
@@ -165,7 +170,7 @@ The conflicts come from two issues sharing a **port** or a **Chrome profile**. T
 - Playwright tests: `baseURL` reads `$PORT` (see config below)
 - Browser tools (Playwright MCP, Chrome DevTools MCP, manual Chrome): launch with
   `--user-data-dir="$BROWSER_PROFILE"` so cleanup can close exactly that browser
-- Stripe CLI: `stripe listen --forward-to localhost:$PORT/api/stripe/webhook`
+- Stripe CLI: `stripe listen --skip-verify --forward-to https://localhost:$PORT/api/stripe/webhook`
 
 ---
 
@@ -389,11 +394,17 @@ Closes #
 ```ts
 const port = process.env.PORT ?? '3000';
 export default defineConfig({
-  use: { baseURL: `http://localhost:${port}` },
+  forbidOnly: !!process.env.CI,
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }], // Chromium only (disk)
+  use: {
+    baseURL: `https://localhost:${port}`, // dev server is HTTPS (basic-ssl); session cookies are Secure
+    ignoreHTTPSErrors: true,
+  },
   webServer: {
-    command: `vite dev --port ${port}`,
-    url: `http://localhost:${port}`,
-    reuseExistingServer: true,
+    command: `E2E_AUTH=1 TTS_PROVIDER=fixture LLM_PROVIDER=fixture vite dev --port ${port}`,
+    url: `https://localhost:${port}`,
+    ignoreHTTPSErrors: true,
+    reuseExistingServer: !process.env.CI,
   },
 });
 ```
@@ -404,7 +415,7 @@ export default defineConfig({
 
 ### GitHub repo settings
 - [ ] Default branch: **`dev`**
-- [ ] Branch protection on `main` and `dev`: require a PR, block force pushes, and **require these status checks to pass before merging**: `typecheck`, `lint`, `test` (with coverage), `build`, `e2e`
+- [ ] Branch protection on `main` and `dev`: require a PR (**0 required approvals**: you can't approve your own PR), block force pushes, and **require these status checks to pass before merging**: `typecheck`, `lint`, `test` (with coverage), `build`, `e2e`
 - [ ] "Require branches to be up to date before merging" (tests run against the latest `dev`)
 - [ ] Merge buttons: allow **squash** (tickets) and **merge commit** (releases)
 - [ ] Turn on "Automatically delete head branches" (cleanup handles it either way)
@@ -421,14 +432,14 @@ test-results/
 
 ### CI (GitHub Actions on PRs to `dev` and `main`)
 - [ ] Jobs, each a **required status check**: `typecheck` → `lint` → `test` (unit + integration + coverage thresholds) → `build` → `e2e` (Playwright)
-- [ ] CI uses mocked external APIs and seeded test data; no real API keys needed except a CI test database (Neon branch)
+- [ ] CI uses mocked external APIs (MSW), fixture providers, and `embedded-postgres`; **no secrets needed in CI**
 - [ ] Upload the Playwright report as an artifact when E2E fails (for debugging)
 - [ ] Test tooling set up in ticket #1 (repo scaffold): Vitest, coverage, MSW, Playwright, lint rules, PR template
 
 ### Environments
-- `dev` deploys to a **preview/staging** URL (Stripe **test** keys)
-- `main` deploys to **production**
-- Secrets live only in `.env.local` and your host's environment variables, never in Git
+- **Only `main` deploys** (production, Stripe **test** keys during the hackathon). Branch deploys and deploy previews are **off**; `dev` is never deployed.
+- Secrets live only in `.env.local` and Netlify environment variables, never in Git
+- Full per-environment matrix: `context/environments.md`
 
 ---
 
@@ -450,14 +461,14 @@ test-results/
   mapped to acceptance criteria. Never call real external APIs in tests. Never use `.skip` or `.only`.
 - Run `npm run verify` and make it pass before opening a PR. Never weaken a test or lower a
   coverage threshold to make CI pass.
-- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR.
+- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR. Never run `git merge`.
 - Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
 ```
 
 ---
 
 ## Hackathon-Day Extras
-- **Limit parallel work to 2–3 worktrees.** More than that is hard to review and burns CPU and RAM (each one has its own dev server and browser).
+- **Limit parallel work to 3 worktrees max.** More than that is hard to review and burns CPU, RAM, and disk (~1–1.5 GB each; ~100 GB free on this machine). Cleanup deletes the worktree including `node_modules`.
 - **Coordinate shared files.** If two issues both change the database schema, shared styles (`_variables.scss`), or config, merge one before starting the other.
-- **Code freeze:** stop merging into `dev` about an hour before the demo. Release `dev` to `main`, then only hotfix.
+- **Code freeze:** stop merging into `dev` about an hour before the demo. The demo runs on localhost:3000 from `dev`. Release `dev` to `main` (one PR) so judges get a URL; fix production-only bugs after.
 - **Tag the demo build** (`v0.1.0-demo`) so you can always roll back to a known-good version.

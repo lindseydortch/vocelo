@@ -13,9 +13,11 @@
 | Instagram | ⏳ Stretch | "Caption mode": requires an image on every post |
 | TikTok, YouTube Shorts, Pinterest, Google Business, Facebook | ❌ Out of scope | Video/visual-first or not a target audience |
 
-**Stack:** TanStack Start (React) · SCSS/Sass modules (`*.module.scss`) · Buffer GraphQL API · ElevenLabs (text-to-speech only) · Anthropic `claude-haiku-5-5` for reactions/Tone read · Stripe · Buffer OAuth for login (verified) · Neon (Postgres) via Drizzle ORM · **Netlify** hosting · Netlify Blobs (audio cache) · Cloudflare R2 (image storage, **stretch**)
+**Stack:** TanStack Start (React) · SCSS/Sass modules (`*.module.scss`) · Buffer GraphQL API · ElevenLabs (text-to-speech only) · Anthropic `claude-haiku-5-5` for reactions/Tone read · Stripe · Buffer OAuth for login (verified) · Neon (Postgres) via Drizzle ORM + `postgres` (postgres.js) driver · **Netlify** hosting · Netlify Blobs (audio cache) · Cloudflare R2 (image storage, **stretch**)
 
 **Vocabulary:** `GLOSSARY.md` (repo root) defines Post, Buffer draft, Persona, Voice avatar, Reviewed post, Usage period, Locked, etc. Use those words in code and tickets.
+
+**Environments:** `context/environments.md` says which keys, database, Buffer client and providers each environment (local, tests, CI, production, demo) uses, where each secret lives, and the demo-day checklist.
 
 ---
 
@@ -54,20 +56,22 @@ Output of grilling Step 0. Sections below are already updated to match.
 
 ### Before build day (human tasks, not agent tickets)
 1. ~~Register a Buffer app client → confirm OAuth works~~ ✅ Done 2026-11-12 (consent + redirect verified)
-2. Point Namecheap nameservers to Cloudflare (24–48 h propagation)
+2. Point Namecheap nameservers to Cloudflare (24–48 h propagation). **Not blocking** (Step 2): production starts on the `netlify.app` URL
 3. ~~Decide hosting + LLM provider~~ ✅ Netlify + Anthropic Haiku 5.5 (Step 1). Create the Netlify site + Anthropic API key
 4. Create Stripe Creator product/price (test mode)
-5. Buy ElevenLabs Starter ($6); pick 3 stock voice IDs for standard personas
+5. Buy ElevenLabs Starter ($6); pick 3 stock voice IDs for standard personas; create one API key per environment with a credit quota (Step 2)
 6. Publish `/privacy` + `/terms` at real URLs (Buffer app client + Stripe need them)
+7. Register a second Buffer app client for production (redirect `https://<site>.netlify.app/auth/callback`) (Step 2)
+8. Full checklist with where each value goes: `context/environments.md`
 
-### Ticket budget
-~3 parallel lanes × ~10 h ÷ ~1.5 h/ticket ≈ **20 tickets**. The ~1.5 h per ticket **includes writing its tests**; don't budget tests as separate tickets. The current MVP is ~4 tickets over. Cut order is in section 12.
+### Ticket sizing
+A ticket is ~1–2 h **including its tests**; never make tests a separate ticket. There is no ticket budget (removed in Step 2): build whatever the MVP needs. Cut order if time runs out is in section 12.
 
 ### Critical path
 ```
 Before build day: Buffer app client test · DNS · hosting · Stripe product · ElevenLabs voices · LLM key
         ↓
-Scaffold (merges alone) → DB schema + usage/plan module STUB (everyone = Free, no limits)
+Infra tickets (Step 2, before build day; scaffold merges alone) → DB schema + usage/plan module STUB (everyone = Free, no limits)
         ↓
    Lane A                 Lane B                     Lane C
    Sign-in (OAuth)        Personas + TTS             Composer editor + char limits
@@ -157,7 +161,7 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 - No self-serve account deletion in MVP (stretch). Disconnect deletes `buffer_connections` only; posts stay. Privacy policy: "Email support@<domain> to delete your data."
 
 ### Storage and tooling
-- **Drizzle ORM** + Neon serverless driver; `drizzle-kit` migrations committed to the repo; UUID primary keys (post URLs are unguessable).
+- **Drizzle ORM** + `postgres` (postgres.js) driver, pooled Neon connection string in deployed envs (changed in Step 2); `drizzle-kit` migrations committed to the repo; UUID primary keys (post URLs are unguessable).
 - **Cached audio:** Netlify Blobs, format `mp3_44100_64` (~8 KB per second of speech), served through a server function (private). Demo + sample audio are static files in `/public/demo/`.
 - **No tables for** audio (Blobs), sessions (encrypted cookie), or OAuth state (short-lived cookie). Images are stretch.
 
@@ -174,8 +178,66 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 | `usage_events` | `id`, `user_id`, `kind` (`tts_chars` / `post_review` / `llm_call`), `amount`, `post_id?` (set null on delete), `created_at` |
 | `stripe_events` | `id` (Stripe `evt_…`), `type`, `processed_at` |
 
-### Ticket budget impact
-Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the single "DB schema + usage/plan module STUB" box on the critical path, so the MVP is now roughly **10 tickets over** the ~20 budget. Revisit the cut order after Step 2.
+### Tickets
+Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the single "DB schema + usage/plan module STUB" box on the critical path.
+
+---
+
+## Step 2 Decisions: Infrastructure + repo setup (agreed 2026-11-12)
+
+Per-environment details (keys, URLs, where secrets live, demo-day checklist): `context/environments.md`.
+
+### Repo + workflow
+| Decision | Result |
+|---|---|
+| Repo | `github.com/lindseydortch/vocelo`, **public** (free branch protection + required checks; judges get a link) |
+| Ticket budget | **Removed.** Build what the MVP needs. |
+| When infra runs | All Step 2 tickets run **before build day**, serially until the scaffold merges |
+| Tooling defaults | npm · Node 24 (`.nvmrc` + Netlify `NODE_VERSION`) · TypeScript `strict` · Prettier (no semicolons, single quotes) · **no git hooks** (`verify` + CI cover it) |
+| Who merges | **Never `git merge` locally.** Ticket agents never merge. The coordinating Claude session merges PRs into `dev` with `gh pr merge --squash` once CI is green, then runs `ticket-cleanup.sh`. The human opens + merges the single `dev` → `main` PR. No required approvals (you can't approve your own PR). |
+| Branch protection | `dev` + `main`: PR required, no force pushes, required checks `typecheck`, `lint`, `test`, `build`, `e2e`, **"up to date before merging" on** (catches two lanes both generating migration `0003`) |
+| Release | **One** `dev` → `main` PR on demo day, after the app works on localhost. Accepted risk: Netlify-only bugs (functions, Blobs, env, 60 s limit) surface after the demo and get fixed then. |
+| Disk (≈100 GB free) | Max **3 worktrees** (~1–1.5 GB each). Playwright installs **Chromium only**. Test Postgres data lives in the OS temp folder, deleted after each run; stale folders swept at startup. Worst case ≈ 5 GB. |
+
+### Databases
+| Decision | Result |
+|---|---|
+| Driver | **`postgres` (postgres.js)** everywhere, not `@neondatabase/serverless`. Netlify functions are Node, so one driver talks to both Neon and plain Postgres. |
+| Neon branches | `main` = production · `dev` = every local dev server (shared, seeded). **No `ci` branch.** |
+| Test database | **`embedded-postgres`** (real Postgres 18 binaries from npm; **no Docker**, nothing global). Vitest `globalSetup` starts it on a free port, creates `vocelo_test_<PORT>`, runs migrations, tears down. Same in CI (no service container). Fallback if it misbehaves: Homebrew `postgresql@18` on port **5433**. Rejected: Docker (conflicts with work setup), PGlite (single connection, can't test `FOR UPDATE`), Neon branch per run (slow, needs API key everywhere). |
+| Migrations | Netlify build runs `drizzle-kit migrate` before `vite build` (production context only). Migration fails → build fails → old deploy keeps serving. **Additive-only** migrations (no drops/renames) during the hackathon. |
+| Seed | `npm run seed` refuses unless `DATABASE_URL`'s host equals `SEED_ALLOWED_HOST` (set only in `.env.local`). Idempotent: deletes + re-creates only seed-tagged rows. |
+
+### Hosting + environments
+| Decision | Result |
+|---|---|
+| Deploys | **Only `main` deploys** (production). Branch deploys **off**, deploy previews **off**. `dev` is never deployed. |
+| Demo | Runs on **localhost:3000**. Production URL is for handing to judges; fixed after the demo if needed. |
+| Production URL | `<site>.netlify.app` first; custom domain added as a second redirect URI once DNS is live. Cloudflare is only needed for email routing (`support@`) and stretch R2; it blocks nothing. |
+| Buffer app clients | **Two.** Dev client (existing): `https://localhost:3000/auth/callback`, used locally + in the demo. Prod client: the production URL(s). Buffer raised hackathon rate limits, but separate clients still isolate quota. |
+| Stripe | **Test mode everywhere**, production included (live keys = stretch). Every endpoint receives every test-mode event, so the webhook answers **200 and ignores** events for unknown customers. |
+| Provider switches | `TTS_PROVIDER=browser\|elevenlabs\|fixture`, `LLM_PROVIDER=anthropic\|fixture`. Local: `browser` + `anthropic`. Tests/CI/E2E: `fixture` (+ MSW). Production + demo: `elevenlabs` + `anthropic`. |
+| ElevenLabs keys | One key per environment, each with a credit quota. A separate **demo** key holds most of the budget and goes in `.env.local` only on demo day. |
+| `DEMO_FALLBACK=1` | Kill switch. Forces `fixture` providers **for the sample post's text only**; everything else shows its normal error. Flip it if ElevenLabs or Anthropic fails mid-demo. |
+| Local HTTPS | `@vitejs/plugin-basic-ssl` on every port. Playwright uses `https://localhost:$PORT` with `ignoreHTTPSErrors: true`. Stripe CLI forwards with `--skip-verify`. |
+| Env validation | `src/server/env.ts` (zod) validates at server start and crashes listing every missing var. Provider keys required only when that provider is active. `SESSION_SECRET` / `TOKEN_ENCRYPTION_KEY` differ per environment; rotation out of scope. `.env.example` lists everything. |
+| E2E sign-in helper | `/__test/login?user=free\|creator` works only when `E2E_AUTH=1` **and** `NODE_ENV !== 'production'`, else 404. The Netlify build fails if `E2E_AUTH` is set at all. E2E runs against `vite dev`. |
+| Error tracking | None in MVP: Netlify function logs + structured `console.error` with a request ID. Sentry is stretch. |
+
+### Conflicts fixed in Step 2
+- `GIT_WORKFLOW.md` Playwright config used `http://`; dev server is HTTPS and cookies are `Secure` → now `https` + `ignoreHTTPSErrors`.
+- `GIT_WORKFLOW.md` said the repo lives at `~/code/vocelo` → real path.
+- Step 1 T1 installed `@neondatabase/serverless` → now `postgres`.
+- Bible said Cloudflare DNS is needed for hosting in MVP → Netlify works without it.
+- "Demo fallback mode" was ambiguous with the sample post → now the `DEMO_FALLBACK` kill switch.
+
+### Tickets
+Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
+
+### Noted for later steps
+- **Netlify Blobs in tests:** an in-memory fake behind the audio-store interface → Step 7
+- **E2E sign-in helper** needs the session cookie module → drafted in Step 2 (I14), blocked by Step 3
+- **Webhook ignores unknown customers** (200) → Step 5
 
 ---
 
@@ -235,8 +297,8 @@ Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the s
     ```
   - Ticket acceptance criteria: "Works on desktop (1280px+)." Mobile gets its own ticket after the MVP flow works.
   - Even before the mobile pass, layouts must not break on small screens (no horizontal scrolling, nothing unreachable).
-- [ ] **Domain + DNS (domain registered at Namecheap)**
-  - Keep the domain registered at Namecheap, but point its **nameservers to Cloudflare** (free plan). Needed for hosting in MVP; also required later for R2 custom domains (images are stretch).
+- [ ] **Domain + DNS (domain registered at Namecheap)**: human task, **not blocking** (Step 2). Production starts on `<site>.netlify.app`.
+  - Keep the domain registered at Namecheap, but point its **nameservers to Cloudflare** (free plan). Used for email routing in MVP; required later for R2 custom domains (images are stretch).
   - In Namecheap: Domain List → Manage → Nameservers → Custom DNS → paste the 2 Cloudflare nameservers. Changes can take up to 24–48 hours, so do this first.
   - After switching, manage **all** DNS records in Cloudflare (Namecheap's DNS settings stop applying):
     - `images.<domain>` → R2 bucket custom domain (stretch, with images)
@@ -246,9 +308,9 @@ Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the s
 - [ ] Server-side API proxy via TanStack Start server functions (no keys in the browser)
 - [ ] Stripe webhook as a TanStack Start server route (needs raw request body for signature verification)
 - [ ] Database (Neon Postgres): users, Buffer tokens (encrypted), subscriptions, personas, versions, reactions, usage (image records are stretch)
-  - Use a Neon branch per environment (`dev`, `main`) so preview deploys never touch production data
+  - Neon branches: `main` (production) and `dev` (local dev servers). Tests use `embedded-postgres`, never Neon (Step 2)
 - [ ] Error handling + loading states (Buffer `MutationError`, ElevenLabs rate limits, LLM failures)
-- [ ] Demo fallback mode (pre-generated audio + reactions for a sample post)
+- [ ] Demo fallback kill switch: `DEMO_FALLBACK=1` forces fixture providers for the sample post's text only (Step 2)
 - [ ] **⚠️ REQUIRED: Testing setup (part of the scaffold ticket, before any feature work)**
   Full rules: "Testing Requirements" in `context/GIT_WORKFLOW.md`. **No tests, no merge.**
   - **Vitest** for unit + integration tests; tests live next to code (`thing.ts` → `thing.test.ts`)
@@ -259,8 +321,8 @@ Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the s
   - **`npm run verify`** = typecheck → lint → tests + coverage → build → E2E
   - **`.github/pull_request_template.md`** with a required Testing section
   - **GitHub Actions CI** with required status checks on `dev` and `main`: `typecheck`, `lint`, `test`, `build`, `e2e`. Runs on GitHub, separate from Netlify deploys.
-  - **CI database:** a dedicated Neon `ci` branch, reset and re-seeded per run (never `dev` or `main`); Drizzle migrations run first
-  - **E2E sign-in helper:** E2E tests can't complete real Buffer OAuth (it only works on port 3000, and tests must not hit Buffer). Add a **test-only** route or fixture that creates a seeded user's session cookie. It must be impossible to enable in production (guarded by an env flag that's never set on Netlify production, plus a check that fails the build if it is).
+  - **Test/CI database:** `embedded-postgres`, a throwaway database per run with Drizzle migrations applied first (never Neon; see Step 2)
+  - **E2E sign-in helper:** E2E tests can't complete real Buffer OAuth (it only works on port 3000, and tests must not hit Buffer). `/__test/login?user=free|creator` sets a seeded user's session cookie; 404 unless `E2E_AUTH=1` and `NODE_ENV !== 'production'`; the Netlify build fails if `E2E_AUTH` is set (Step 2).
   - **Stripe in tests:** never drive the hosted Checkout page. Test plan changes by sending **signed fixture webhook events** to `/api/stripe/webhook` (valid signature, invalid signature, duplicate event ID for idempotency, each handled event type).
   - **Fixed clock** in tests for usage periods, history windows, and anniversary resets (e.g., Vitest fake timers or an injectable `now()`)
   - **Shared test helpers:** `createTestUser({ plan })`, `createTestPost({ lastEditedAt })`, Buffer/Stripe/ElevenLabs/Anthropic MSW handlers with success + error variants
@@ -409,7 +471,7 @@ Step 1 drafts 8 tickets (`context/tickets/01-data-model.md`). They replace the s
 - [ ] First-run welcome: point new users to the sample post (from seed data) so they hear a persona within the first minute
 
 ### 11. Demo & Pitch
-- [ ] Demo script: Sign in with Buffer (Free) → hit limit → Stripe upgrade → custom persona → review post → approve & schedule
+- [ ] Demo script (runs on localhost:3000; checklist in `context/environments.md`): Sign in with Buffer (Free) → hit limit → Stripe upgrade → custom persona → review post → approve & schedule
 - [ ] Business slide: pricing tiers + unit economics
 
 ### 12. Design Pass (LAST STEP)
