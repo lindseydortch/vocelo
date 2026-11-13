@@ -20,7 +20,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
         <section aria-labelledby="problem-heading" className={styles.section}>
           <h2 id="problem-heading">{copy.problem.heading}</h2>
           <p>{copy.problem.body}</p>
-          <h2>{copy.solution.heading}</h2>
+          <h2 id="solution-heading">{copy.solution.heading}</h2>
           <p>{copy.solution.body}</p>
         </section>
 
