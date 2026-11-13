@@ -61,3 +61,5 @@ export const pagesCopy = {
     supportEmail: 'support@vocelo.app',
   },
 } as const
+
+export const pendingCopy = { label: 'Loading…' } as const
