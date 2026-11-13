@@ -1,0 +1,48 @@
+name: Clear resolved blockers
+
+# Removes native "blocked by" links to blockers that are resolved, so the
+# Blocked badge on GitHub clears on its own. Same rule as scripts/ticket-next.sh:
+#   human ticket: closed as completed
+#   agent ticket: closed as completed AND branch <type>/<N>-<slug> merged into dev/main
+# The "**Blocked by:** #N" line in the issue body is left alone (history), and
+# ticket-next.sh reads it, so nothing is lost.
+
+on:
+  issues:
+    types: [closed]
+  pull_request:
+    types: [closed]
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  sweep:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Remove resolved blocked-by links
+        run: |
+          set -euo pipefail
+          MERGED=$(gh pr list -R "$REPO" --state merged --limit 1000 --json headRefName,baseRefName \
+            --jq '[.[] | select(.baseRefName == "dev" or .baseRefName == "main") | .headRefName]')
+          ISSUES=$(gh issue list -R "$REPO" --state all --limit 1000 --json number,state,stateReason,labels)
+
+          # "<dependent> <blocker> <blocker_id>" for every resolved link on an open issue
+          for N in $(jq -r '.[] | select(.state == "OPEN") | .number' <<<"$ISSUES"); do
+            gh api "repos/$REPO/issues/$N/dependencies/blocked_by" --paginate \
+              --jq '.[] | select(.state == "closed" and .state_reason == "completed") | "\(.number) \(.id)"' |
+            while read -r B ID; do
+              HUMAN=$(jq --argjson b "$B" 'any(.[] | select(.number == $b) | .labels[]; .name == "human")' <<<"$ISSUES")
+              if [ "$HUMAN" = "true" ] || jq -e --argjson b "$B" 'any(.[]; test("^[a-z]+/\($b)-"))' <<<"$MERGED" >/dev/null; then
+                echo "#$N: removing resolved blocker #$B"
+                gh api -X DELETE "repos/$REPO/issues/$N/dependencies/blocked_by/$ID" --silent
+              fi
+            done
+          done
