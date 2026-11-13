@@ -10,4 +10,10 @@ export const authCopy = {
     heading: 'Vocelo',
     placeholder: 'Your dashboard will live here.',
   },
+  settings: {
+    title: 'Settings',
+    heading: 'Settings',
+    placeholder: 'Your settings will live here.',
+    signOut: 'Sign out',
+  },
 } as const
