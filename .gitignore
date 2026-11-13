@@ -1,0 +1,10 @@
+.env
+.env.*
+.ticket.env
+.browser-profiles/
+playwright-report/
+test-results/
+node_modules/
+dist/
+.netlify/
+coverage/

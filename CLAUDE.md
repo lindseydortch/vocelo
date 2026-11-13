@@ -26,3 +26,26 @@ Title `<type>: <description>` · labels (`MVP`/`stretch` + area, plus `human` if
 
 ## Commit messages and PR descriptions
 End every commit message and PR description with its own body text. Leave out all Claude attribution: no `Co-Authored-By: Claude` or `Claude-Session` trailers, no "Generated with Claude Code" footer, no session links. This applies to every commit and PR in this project, including squash-merge messages.
+
+## Git workflow (MANDATORY)
+- One issue = one branch = one folder = one port = one browser profile = one agent.
+- You are assigned exactly ONE issue. Only work on that issue.
+- Never start, work on, or close an issue labeled `human`. If your ticket turns out to need a human step,
+  STOP and report it so the human can split it into a `human` ticket that blocks yours.
+- Never start an issue with an unresolved blocker (`./scripts/ticket-next.sh --check <N>` fails).
+  Do not work around it, partially implement it, or stub the blocker's code. Report and wait.
+- BEFORE editing, committing, running servers, or opening browsers, run `./scripts/ticket-check.sh`.
+  If it fails, STOP and report. Do not try to fix it by switching branches or folders.
+- Never run `git switch`, `git checkout <branch>`, or `git worktree add/remove` yourself.
+- Never edit files outside your ticket folder (`TICKET_DIR` in `.ticket.env`).
+  Never edit the main repo folder when assigned a worktree.
+- Only use the `PORT` and `BROWSER_PROFILE` from `.ticket.env`.
+  Never touch another issue's branch, port, browser, or folder.
+- If you notice work that belongs to a different issue, write it down in the PR description; do not do it.
+- Use Conventional Commits that reference the issue number.
+- Every ticket ships with tests per "Testing Requirements": happy path + at least one failure case,
+  mapped to acceptance criteria. Never call real external APIs in tests. Never use `.skip` or `.only`.
+- Run `npm run verify` and make it pass before opening a PR. Never weaken a test or lower a
+  coverage threshold to make CI pass.
+- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR. Never run `git merge`.
+- Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
