@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   afterAll,
   afterEach,
@@ -357,7 +357,7 @@ describe('refund', () => {
       await testDb
         .select()
         .from(usageEvents)
-        .where(and(eq(usageEvents.id, first.eventId))),
+        .where(eq(usageEvents.id, first.eventId)),
     ).toEqual([])
     const retry = await checkAndConsume(user.id, {
       postId: post.id,

@@ -130,7 +130,8 @@ export async function checkAndConsume(
   })
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * Refund a reservation after a provider failure by deleting its usage event.
@@ -139,7 +140,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * throwaway IDs returned for sample posts) are ignored.
  */
 export async function refund(eventId: string): Promise<void> {
-  if (!UUID.test(eventId)) return
+  if (!UUID_PATTERN.test(eventId)) return
   await db
     .delete(usageEvents)
     .where(
