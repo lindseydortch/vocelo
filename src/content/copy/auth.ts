@@ -3,7 +3,9 @@ export const authCopy = {
     title: 'Sign in',
     heading: 'Sign in',
     cta: 'Sign in with Buffer',
-    expired: 'Your Buffer connection expired. Sign in again to keep going.',
+    access:
+      'Vocelo can read your Buffer account and read and write your posts.',
+    expired: 'Your Buffer connection expired. Sign in again.',
   },
   error: {
     title: 'Sign-in problem',
