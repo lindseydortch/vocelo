@@ -10,6 +10,8 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 
 | Ticket | Label | Assumption | Status |
 |---|---|---|---|
+| #52 | nice to know | A connection with null access expiry is a non-expiring dev personal API key and is returned without refresh unless forced. Invalid successful token responses are temporary errors and preserve credentials. Auth expiry is an Error with both message and code `BUFFER_AUTH_EXPIRED`; session clearing remains the caller's responsibility. |
+| #52 | nice to know | Human confirmed token-endpoint HTTP 429 deletes credentials as `BUFFER_AUTH_EXPIRED`, matching the ticket’s any-4xx rule. Updated the project bible to distinguish token-endpoint 429 from temporary GraphQL rate limiting. |
 | #5 | need to review | MSW 3 renamed `onUnhandledRequest` to `onUnhandledFrame`; used `onUnhandledFrame: 'error'` in `src/test/setup.ts` instead of the ticket's wording. | open |
 | #5 | need to review | No lint script exists yet, so `verify` = typecheck → test:coverage → build. Lint must be inserted before tests when its ticket lands. | open |
 | #5 | nice to know | `now()` returns a fresh `Date` copy each call so callers can't mutate the clock. | open |
