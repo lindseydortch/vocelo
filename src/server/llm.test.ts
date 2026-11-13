@@ -150,6 +150,21 @@ describe('retries', () => {
   })
 })
 
+describe('truncation', () => {
+  it('does not retry output cut off at max_tokens', async () => {
+    const state = counted(() =>
+      Response.json({
+        ...anthropicMessage('{"label":"Conf'),
+        stop_reason: 'max_tokens',
+      }),
+    )
+    await expect(getToneRead(prompt, live)).rejects.toMatchObject({
+      code: 'FAILED',
+    })
+    expect(state.calls).toBe(1)
+  })
+})
+
 describe('error codes', () => {
   it('maps 429 to BUSY without retrying', async () => {
     const state = counted(() => new Response('{}', { status: 429 }))

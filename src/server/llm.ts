@@ -28,7 +28,7 @@ export type LlmErrorCode = 'BUSY' | 'UNAVAILABLE' | 'FAILED'
 export class LlmError extends Error {
   /** HTTP status when the failure was an API error response. */
   readonly status?: number
-  /** The model declined to answer; never retried. */
+  /** Declined or cut off: a retry cannot help, so it is never retried. */
   readonly refused: boolean
   constructor(
     readonly code: LlmErrorCode,
@@ -123,6 +123,12 @@ async function callOnce<T>(
   }
   if (body.stop_reason === 'refusal') {
     throw new LlmError('FAILED', 'The model declined to answer', {
+      refused: true,
+    })
+  }
+  if (body.stop_reason === 'max_tokens') {
+    // Truncated JSON; an identical retry truncates the same way.
+    throw new LlmError('FAILED', 'Anthropic output was cut off', {
       refused: true,
     })
   }
