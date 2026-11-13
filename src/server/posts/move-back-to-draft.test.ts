@@ -138,9 +138,26 @@ describe('moveBackToDraft', () => {
     remote = { status: 'scheduled' }
     const { user, post } = await setup()
     remote = { moveFails: true }
-    // pre-check must still see "scheduled": the handler treats moveFails as scheduled
+    // With moveFails set the pre-check query falls back to a scheduled post.
     await expect(moveBackToDraft(user, post.id)).rejects.toThrow('nope')
     expect(await writeEvents(user.id)).toBe(0)
+    expect(await row(post.id)).toMatchObject({ bufferStatus: 'scheduled' })
+  })
+
+  it('scheduled: hourly write cap blocks the move before Buffer is called', async () => {
+    remote = { status: 'scheduled' }
+    const { user, post } = await setup()
+    await testDb.insert(usageEvents).values(
+      Array.from({ length: 30 }, () => ({
+        userId: user.id,
+        kind: 'buffer_write' as const,
+        amount: 1,
+      })),
+    )
+    await expect(moveBackToDraft(user, post.id)).rejects.toMatchObject({
+      code: 'BUFFER_WRITE_CAP',
+    })
+    expect(writes).toEqual([])
     expect(await row(post.id)).toMatchObject({ bufferStatus: 'scheduled' })
   })
 
