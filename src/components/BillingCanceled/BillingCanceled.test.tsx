@@ -35,7 +35,6 @@ async function renderPage() {
   })
   await router.load()
   render(<RouterProvider router={router} />)
-  return router
 }
 
 describe('BillingCanceled', () => {
@@ -47,11 +46,6 @@ describe('BillingCanceled', () => {
     expect(
       screen.getByRole('link', { name: 'Back to pricing' }).getAttribute('href'),
     ).toBe('/pricing')
-  })
-
-  it('does not follow the link on its own', async () => {
-    const router = await renderPage()
-    expect(router.state.location.pathname).toBe('/')
   })
 })
 

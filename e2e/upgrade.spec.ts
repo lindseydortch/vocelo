@@ -1,12 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { signInAs } from './helpers/auth'
 
 test.describe('checkout canceled', () => {
   test('renders and links back to /pricing', async ({ page }) => {
-    // `db=off` sets only the session cookie (CI's e2e has no database).
-    const login = await page.request.get('/__test/login?user=free&db=off', {
-      maxRedirects: 0,
-    })
-    expect(login.status()).toBe(302)
+    await signInAs(page, 'free', { dbOff: true })
 
     await page.goto('/app/billing/canceled')
     await expect(
