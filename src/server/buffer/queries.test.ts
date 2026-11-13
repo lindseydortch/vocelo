@@ -94,6 +94,18 @@ describe('queue-paused flag', () => {
   )
 })
 
+describe('list queries request the flag too', () => {
+  it('listChannels and listDraftPosts include isQueuePaused', async () => {
+    let body: Body | undefined
+    respond({ channels: [channel] }, (b) => (body = b))
+    await listChannels('tok', 'org1')
+    expect(body?.query).toContain('isQueuePaused')
+    respond({ posts: { edges: [{ node: post }] } }, (b) => (body = b))
+    await listDraftPosts('tok', 'org1', ['ch1'])
+    expect(body?.query).toContain('isQueuePaused')
+  })
+})
+
 describe('channel queries', () => {
   it.each([
     ['listChannels', () => listChannels('tok', 'org1')],
