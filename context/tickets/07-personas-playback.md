@@ -43,7 +43,8 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none (catalogs are shared; plan gating is in V13).
-**Blocked by:** Step 2 I5; H2 (real voice IDs; can merge with placeholders).
+**Blocked by:** Step 2 I5.
+**Soft dependency (not blocking):** H2: real voice IDs; merge with placeholders, swap in real IDs after.
 **Files likely touched:** `src/lib/voices.ts`, `src/lib/avatars.ts`, `src/assets/avatars/*`, tests
 **Out of scope:** avatar artwork (Design Pass), uploads (stretch).
 
@@ -75,7 +76,8 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** none. The cache is shared across all users and plans.
-**Blocked by:** Step 2 I5; Step 6 C2 (can inline normalization and swap later).
+**Blocked by:** Step 2 I5.
+**Soft dependency (not blocking):** Step 6 C2: inline normalization and swap to the shared helper once it merges.
 **Files likely touched:** `src/server/audio-store.ts`, `src/server/audio-store.test.ts`
 **Out of scope:** cleanup of old blobs (stretch).
 
@@ -232,7 +234,8 @@ V7 + V10 are the playback wiring point Step 5 P12 waits on. Cut order: V11 first
 - [ ] E2E: `creator` creates, edits, sees it in the composer picker. Works on desktop 1280px+
 
 **Plan behavior:** Creator only.
-**Blocked by:** V12, V13, V8; V16 (preview files; can merge with missing-file fallback "Preview unavailable").
+**Blocked by:** V12, V13, V8.
+**Soft dependency (not blocking):** V16: preview files; merge with the missing-file fallback "Preview unavailable".
 **Files likely touched:** `src/routes/app/personas/new.tsx`, `src/routes/app/personas/$id.edit.tsx`, `src/components/PersonaForm/*`, `e2e/personas.spec.ts`
 **Out of scope:** AI-generated personas (stretch).
 

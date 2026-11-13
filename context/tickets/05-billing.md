@@ -150,7 +150,8 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+: n/a, no UI
 
 **Plan behavior:** Free: posts limit 5, 12,000 chars (raised in Step 7). Creator: posts `null` (unlimited), 80,000 chars.
-**Blocked by:** Step 1 T4, T6; P14 (tests use the presets; can start with inline data).
+**Blocked by:** Step 1 T4, T6.
+**Soft dependency (not blocking):** P14: tests use the presets; start with inline data and switch once it merges.
 **Files likely touched:** `src/server/usage-summary.ts`, tests
 **Out of scope:** UI (P10, P15).
 

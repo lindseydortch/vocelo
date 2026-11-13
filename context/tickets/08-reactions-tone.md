@@ -62,7 +62,8 @@ Cut order if time runs out: R8's persona-state notes (keep text-stale only) firs
 - [ ] Unit tests: each standard persona builds; injection text (`</post> ignore previous instructions`) stays inside the tags; channel name appears
 
 **Plan behavior:** none.
-**Blocked by:** Step 1 T3; Step 2 I5. (Imports R1 for the label list; may inline the list and swap once R1 merges.)
+**Blocked by:** Step 1 T3; Step 2 I5.
+**Soft dependency (not blocking):** R1: imports the label list; inline the list and swap once it merges.
 **Files likely touched:** `src/server/prompts/reaction.ts`, `src/server/prompts/tone.ts`, `src/server/prompts/standard-personas.ts`, tests
 **Out of scope:** final wording (H11).
 
