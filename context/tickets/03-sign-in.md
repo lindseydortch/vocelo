@@ -255,7 +255,7 @@ Each ticket adds its own MSW handlers (success + error variants) to `src/test/ha
 
 ## Noted for later steps (not drafted here)
 - **Reconnect dialog + `localStorage` restore** on `BUFFER_AUTH_EXPIRED` → Step 6 (Composer)
-- **Checkout prefills `customer_email`** → Step 5 (Billing)
+- **Buffer email becomes the Stripe Customer email** (Checkout passes `customer`) → Step 5 (Billing)
 - **Cache channel/draft lists** (rate limit is per client across all users); posts write `buffer_organization_id` → Step 4
 - **Use `users.timezone` for `dueAt`** → Step 9
 - **`ensureSamplePost` content; Settings shows connected org + Buffer status** → Step 10

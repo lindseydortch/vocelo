@@ -58,7 +58,7 @@ Output of grilling Step 0. Sections below are already updated to match.
 1. ~~Register a Buffer app client → confirm OAuth works~~ ✅ Done 2026-11-12 (consent + redirect verified)
 2. Point Namecheap nameservers to Cloudflare (24–48 h propagation). **Not blocking** (Step 2): production starts on the `netlify.app` URL
 3. ~~Decide hosting + LLM provider~~ ✅ Netlify + Anthropic Haiku 5.5 (Step 1). Create the Netlify site + Anthropic API key
-4. Create Stripe Creator product/price (test mode)
+4. Create Stripe Creator product/price (test mode); configure the test-mode Customer Portal, "limit customers to one subscription", and "cancel when retries run out" (Step 5)
 5. Buy ElevenLabs Starter ($6); pick 3 stock voice IDs for standard personas; create one API key per environment with a credit quota (Step 2)
 6. Publish `/privacy` + `/terms` at real URLs (Buffer app client + Stripe need them)
 7. Register a second Buffer app client for production (redirect `https://<site>.netlify.app/auth/callback`) (Step 2)
@@ -104,7 +104,6 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 ### Open questions handed to later grilling sessions
 - ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
 - ~~Step 3 (sign-in)~~ ✅ answered; see "Step 3 Decisions" below
-- **Step 5 (billing):** Stripe webhook idempotency; success page loading before the webhook lands; atomic check-then-consume on usage counters
 - **Step 9 (scheduling):** reuse Step 4's pre-save check + `saveDraft`; what Approve & schedule does when Buffer's queue is full (`LimitReachedError`, Buffer Free = 10 scheduled per channel); timezone for `dueAt` (Step 3 stores Buffer's `account.timezone` in `users.timezone`; Step 9 decides how to use it)
 - **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
 
@@ -272,7 +271,7 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
 | Sign out | POST only. Clears the cookie; tokens stay. |
 | Disconnect | POST only. Deletes `buffer_connections` + clears the cookie; posts, plan, personas stay. Confirm dialog: "Your Creator plan keeps billing. Cancel it in Billing first if you want to stop." and "To fully remove access, also remove Vocelo in Buffer → Settings → Connected apps." |
 | Plans | Sign-in behaves the same on every tier. Plan follows `buffer_account_id`. A paid user with a dead token keeps their plan and billing; only Buffer actions stop until they sign in again. New Buffer account = new Free user; merging accounts is support-only. |
-| Email | Stored and refreshed every sign-in; prefills Stripe Checkout `customer_email` (Step 5). No verification. |
+| Email | Stored and refreshed every sign-in; becomes the Stripe Customer's `email` (Step 5 passes `customer`, not `customer_email`, to Checkout). No verification. |
 | Timezone | `users.timezone` from `account.timezone`, refreshed every sign-in, nullable (browser timezone fallback). Used by Step 9. |
 | Dev sign-in | `/__dev/login` works only when `BUFFER_API_KEY` is set **and** `NODE_ENV !== 'production'`, else 404. Looks up the account with the personal key, upserts the user, stores the key as the access token with no refresh token, sets the session. Lets worktree ports (3000 + N) click through Buffer features. The Netlify build fails if `BUFFER_API_KEY` is set. |
 
@@ -282,7 +281,7 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
 
 ### Conflicts flagged
 - **Composer (Step 6):** owns the reconnect dialog + `localStorage` restore for `BUFFER_AUTH_EXPIRED`.
-- **Billing (Step 5):** Disconnect never cancels Stripe; dialog says so. Checkout prefills `customer_email`.
+- **Billing (Step 5):** Disconnect never cancels Stripe; dialog says so. The Buffer email becomes the Stripe Customer's email (Step 5).
 - **Buffer integration (Step 4):** rate limit is per app client across all users; cache channel/draft lists. Posts store their org ID.
 - **Pages (Step 10):** `/auth/callback` has no UI; Settings shows connected org; `ensureSamplePost` is filled in there.
 
@@ -347,6 +346,62 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 
 ### Tickets
 Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
+
+---
+
+## Step 5 Decisions: Billing (agreed 2026-11-12)
+
+### Stripe facts (docs.stripe.com, checked 2026-11-12)
+- Pin the SDK to API version **`2026-10-28.endive`**.
+- Since `2025-03-31.basil`, billing periods live on **subscription items**: `subscription.items.data[0].current_period_start/end` (not on the Subscription).
+- Checkout creates subscriptions in **flexible billing mode**: a pending cancel sets `cancel_at`, not `cancel_at_period_end`.
+- Checkout `customer` reuses an existing Customer (email prefilled, locked). `subscription_data.metadata` copies onto the Subscription. `expires_at` is 30 min–24 h (default 24 h). `success_url` takes the literal `{CHECKOUT_SESSION_ID}`.
+- Dashboard setting "limit customers to one subscription" redirects a customer who already has an active/past_due/unpaid/paused subscription to the Portal.
+- Webhook order is **not guaranteed**; duplicates happen; only 2xx = success. Sandbox retries 3 times over a few hours (live: 3 days). Signature check needs the **raw body**; default tolerance 5 min. Tests sign fixtures with `stripe.webhooks.generateTestHeaderString`.
+- Statuses: `incomplete` (first payment pending, 23 h) → `incomplete_expired`; `trialing`; `active`; `past_due` (renewal failed); `canceled`; `unpaid`; `paused` (endive can auto-pause after payment failure). Smart Retries: up to 8 tries in ~2 weeks, then the Dashboard's chosen outcome.
+- Portal: `subscription_cancel.mode` `at_period_end` | `immediately`; payment method update; invoice history; plan switching; pause. **Test mode has its own portal configuration.**
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Scope | Step 5 = Stripe client, customer, Checkout, webhook, `applySubscription`, success/canceled pages, Customer Portal, plan-aware pricing CTAs, meters, past_due banner, limit-reached prompts, locked teaser card, billing test presets. Already drafted in Step 1: usage periods (T4), stub (T5), enforcement (T6), history filter (T7). **Stretch:** Team checkout, trials, annual, promo codes, character top-ups, live keys, seeding real Stripe test customers. |
+| Stripe customer | Created on the **first "Upgrade" click**, before redirect: `email` (from Buffer), `metadata.userId`; saved to `users.stripe_customer_id`; reused forever. Checkout always passes `customer`, never `customer_email`. |
+| Checkout session | `mode: subscription`, `STRIPE_CREATOR_PRICE_ID`, `customer`, `client_reference_id = userId`, `subscription_data.metadata.userId`, `expires_at` = 30 min, no promo codes, no Stripe Tax, USD. `success_url` = `/app/billing/success?session_id={CHECKOUT_SESSION_ID}`, `cancel_url` = `/app/billing/canceled`. |
+| Already paid | Effective plan Creator → server **refuses** to create a Checkout Session; UI shows "You're on Creator" + Manage billing. Backstop: Stripe's "one subscription per customer" setting. A duplicate that still lands is **logged only** and fixed by hand. |
+| Single writer | `applySubscription(subscriptionId)` is the **only** code that writes `stripe_subscription_id`, `subscription_status`, `current_period_start/end`, `cancel_at_period_end`. It **re-fetches the subscription from Stripe** (never trusts the event payload), reads the period from `items.data[0]`, and sets `cancel_at_period_end = cancel_at != null OR cancel_at_period_end`. |
+| Effective plan | Creator while status is `active`, `trialing`, `past_due`. Everything else is Free: `incomplete`, `incomplete_expired`, `unpaid`, `canceled`, `paused`. |
+| Usage period on change | Upgrade → period = Stripe item period (Free usage doesn't carry). Status leaves the paid set (`canceled`/`unpaid`/`paused`/`incomplete_expired`) → `period_anchor_at` = when it ended (fresh Free period). `incomplete` → no change. |
+| Webhook | `/api/stripe/webhook` reads the raw body, verifies the signature (bad → 400). Handled: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`; each resolves the subscription ID and calls `applySubscription`. Others → 200 ignored. `stripe_events` row inserted **in the same transaction** as the update; seen event ID → 200 skip. Processing error → **500** so Stripe retries. |
+| Finding the user | `subscription.metadata.userId` first, then `users.stripe_customer_id`. Neither → 200, ignored (test-mode events from other apps). Disagreement → trust the customer ID, log it. |
+| Success page | Server retrieves the Checkout Session, checks it belongs to the signed-in user (else 404), calls `applySubscription`. Not paid yet → "Finishing up…", polls every 2 s for up to 20 s, then "Your payment is processing. Refresh in a minute." The demo never depends on `stripe listen`. |
+| Canceled page | "No changes made" + back to `/pricing`. Nothing written. |
+| Customer Portal | "Manage billing" creates a portal session (`return_url` = `/app/settings/billing`). Portal allows card update, invoices, **cancel at period end only**, undo cancel; no plan switching, no pause. Fake/unknown customer (seed users) → "Billing isn't set up for this test account." Stripe down → "Couldn't open billing. Try again." |
+| Pricing page | Signed out: Creator CTA → `/signin?returnTo=/pricing` (no auto-checkout). Free: "Upgrade". Creator: "Current plan" + "Manage billing". Team: disabled "Coming soon". |
+| Meters | Billing settings: plan line ("Creator · renews Dec 12" / "Creator · ends Dec 12" / "Payment failed"), posts meter ("3 of 5 posts reviewed" / "Unlimited"), characters meter ("6,200 of 8,000 voice characters left"), "Resets Dec 12". Composer shows a compact version. |
+| past_due | Banner in Billing settings + composer: "Your last payment failed. Update your card to keep Creator." → Portal. User keeps Creator during retries. |
+| Limit reached | New audio, reactions, Tone read blocked; cached ones still play. Free: "Upgrade to Creator" → Checkout. Creator out of characters: "Resets {date}", no upsell (Team coming soon). |
+| Locked teaser card | Free: "🔒 N posts older than 30 days. Upgrade to see them" → Checkout. Creator: "🔒 N posts older than 12 months. Team is coming soon", no button. |
+| Downgrade | Nothing deleted. Custom personas locked; reactions from Creator days stay visible; on Free the first **new** reaction request locks `reaction_persona_id`. Fresh Free period. |
+| Refunds, disputes, tax | Manual in the Stripe dashboard; the app ignores them. A refund never changes the plan; only subscription status does. |
+| Disconnect / dead Buffer token | Never touches Stripe (Step 3). |
+| Test users | 7 presets shared by `createTestUser({ preset })`, `npm run seed`, and `/__test/login?user=<key>`: `free`, `free-at-limit` (5/5 posts), `free-low-chars` (500 left), `free-downgraded` (2 locked custom personas, posts 45 days old), `creator` (renews in 20 days), `creator-canceling` (ends in 3 days), `creator-past-due`. Seeded paid users get fake `cus_seed_…` / `sub_seed_…` IDs; real billing is tested by signing in as `free` and paying with `4242 4242 4242 4242`. |
+
+### Human setup (before build day, Stripe test mode)
+1. Creator product + $15/mo USD price (already listed)
+2. Customer Portal (test mode): cancel at period end, payment method update, invoice history; no plan switching, no pause; default return URL
+3. Settings → Checkout and Payment Links → Subscriptions: **limit customers to one subscription** (keep the no-code portal login link on)
+4. Settings → Billing → retries: when retries run out, **cancel the subscription**
+5. Webhook endpoint for production (events listed above)
+
+### Conflicts flagged
+- **Schema:** `current_period_start/end` come from the subscription item, not the subscription; `cancel_at_period_end` is derived from `cancel_at` too. No new columns needed.
+- **Step 2 I12/I13/I14:** seed, factories, and the E2E helper only had `free` / `creator`. P14 adds the 7 presets on top (no edits to merged tickets).
+- **Reactions (Step 8):** Free's 1-persona-per-post after downgrade uses `reaction_persona_id` only for new requests; old reactions stay.
+- **Personas (Step 7):** downgrade locks custom personas (already decided); the `free-downgraded` preset exercises it.
+- **Demo:** the success page syncs directly from Stripe, so the upgrade step works even if `stripe listen` is slow.
+
+### Tickets
+Step 5 drafts 15 tickets (`context/tickets/05-billing.md`).
 
 ---
 
@@ -445,7 +500,7 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
 | Usage + plans | Check-then-consume is atomic (concurrent requests can't overspend); refund on provider failure; "too big for what's left" blocks with no partial read; cached replays, imports, and the sample post never count; first billable action counts the post once per period; Free vs. Creator limits; effective plan for `active` / `trialing` / `past_due` / canceled |
 | Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
 | History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
-| Billing | Webhook signature check; idempotency via `stripe_events`; success page before the webhook lands; Customer Portal link |
+| Billing | Webhook signature check (raw body); idempotency via `stripe_events` in the same transaction; out-of-order events can't roll back (re-fetch); unknown customer → 200; success page before the webhook lands; already-Creator can't open Checkout; canceling / past_due / canceled status mapping; Free period restarts when a subscription ends; Customer Portal link + fake-customer message; all 7 test presets |
 | Personas | Standard personas exist via migration; Creator limit of 5 custom; Free blocked; soft delete keeps old reactions' names; downgrade locks custom personas; Free "1 persona per post" locks in |
 | Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters |
 | Reactions + Tone read | Schema-valid JSON parsed; invalid JSON → retry once → friendly error, nothing consumed; cache by text hash; "Text changed: refresh"; 60 LLM calls / hour cap |
@@ -463,7 +518,7 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
   - **Text-only post:** a realistic LinkedIn-length post (~800 characters) with a few lines that read differently by persona (e.g., one humblebrag, one unclear sentence)
   - **Imported Buffer draft with 2 images:** tests that saving from Vocelo preserves Buffer images
   - A short X-length post (under 280 characters) to test character limits
-  - Seeded test user on the Free plan, plus one on Creator, to test plan gating
+  - Seeded users for all 7 billing presets (`free`, `free-at-limit`, `free-low-chars`, `free-downgraded`, `creator`, `creator-canceling`, `creator-past-due`; Step 5), shared with `createTestUser({ preset })` and `/__test/login?user=<key>`
   - Posts backdated 45 days and 13 months, to test the history window locks
   - Pre-generated persona reactions + tone results for the sample posts (used by Playwright tests and demo fallback mode)
   - Playwright tests use the seeded data so they never call ElevenLabs or the LLM (saves credits)
@@ -485,11 +540,12 @@ Step 4 drafts 16 tickets (`context/tickets/04-buffer-integration.md`).
   - Sign out (clears session) vs. Disconnect (also deletes stored Buffer tokens; Buffer has no revoke endpoint, so the dialog points to Buffer's Connected apps)
   - Protected routes: redirect to sign-in when there's no session
   - Full rules: "Step 3 Decisions"
-- [ ] Stripe customer linked to the Vocelo user ID (created at first checkout)
+- [ ] Stripe customer linked to the Vocelo user ID (created on the first "Upgrade" click; Step 5)
 - [ ] Dev-only fallback: personal API key in `.env.local` powers `/__dev/login` (not exposed to users; build fails if set in Netlify)
 - [ ] Organization lookup → `organizationId` (needed for drafts): auto-pick the owned org, else the first; switching is stretch
 
 ### 3. Billing (Stripe)
+Full rules: "Step 5 Decisions". Tickets: `context/tickets/05-billing.md`.
 - [ ] Stripe Products/Prices: Creator only (Team shown as "Coming soon"; see `pricing-tiers.md`)
 - [ ] Pricing page → Stripe Checkout
 - [ ] Stripe webhook → update user plan (subscribed, renewed, canceled, payment failed)
