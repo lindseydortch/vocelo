@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ticket-next.sh             → Ready / In progress / Your queue / Blocked
-# ticket-next.sh --check <N> → exit 1 if #N is closed, human, or blocked (ticket-start.sh runs this)
+# ticket-next.sh --check <N> → exit 1 if #N is closed, human, on-hold, or blocked (ticket-start.sh runs this)
 set -euo pipefail
 
 # Clean up merged tickets first (best-effort; skipped for --check, which start.sh already preceded with a sweep)
@@ -17,6 +17,7 @@ BRANCHES=$(git ls-remote --heads origin | sed 's#.*refs/heads/##' | jq -R . | jq
 # branch <type>/<N>-<slug> merged into dev/main. Everything else is listed with the reason.
 REPORT=$(jq --argjson merged "$MERGED" --argjson branches "$BRANCHES" '
   def human: any(.labels[]; .name == "human");
+  def hold: any(.labels[]; .name == "on-hold");
   def branch_for($n): first($branches[] | select(test("^[a-z]+/\($n)-"))) // null;
   (map({key: (.number|tostring), value: .}) | from_entries) as $by
   | map(select(.state == "OPEN"))
@@ -32,7 +33,7 @@ REPORT=$(jq --argjson merged "$MERGED" --argjson branches "$BRANCHES" '
             elif ($x|human) then empty
             elif any($merged[]; test("^[a-z]+/\($b)-")) then empty
             else {n:$b, why:"closed, but no merged PR"} end)
-      | {number:$i.number, title:$i.title, human:($i|human),
+      | {number:$i.number, title:$i.title, human:($i|human), hold:($i|hold),
          branch: branch_for($i.number), unresolved: .})
 ' <<<"$ISSUES")
 
@@ -42,6 +43,8 @@ if [ "${1:-}" = "--check" ]; then
   [ -n "$ROW" ] || { echo "❌ #$N is not an open issue."; exit 1; }
   [ "$(jq .human <<<"$ROW")" = "false" ] || {
     echo "❌ #$N is a human ticket. Only the human works it; agents never start it."; exit 1; }
+  [ "$(jq .hold <<<"$ROW")" = "false" ] || {
+    echo "❌ #$N is on hold (label on-hold). Do not start it until the human lifts the hold."; exit 1; }
   if [ "$(jq '.unresolved | length' <<<"$ROW")" != "0" ]; then
     echo "❌ #$N is blocked. Do not start any work on it until these are resolved:"
     jq -r '.unresolved[] | "   #\(.n): \(.why)"' <<<"$ROW"
@@ -52,7 +55,7 @@ if [ "${1:-}" = "--check" ]; then
 fi
 
 echo "✅ Ready (agent tickets, nothing blocking):"
-jq -r '.[] | select((.human|not) and (.unresolved|length == 0) and .branch == null)
+jq -r '.[] | select((.human|not) and (.hold|not) and (.unresolved|length == 0) and .branch == null)
   | "   #\(.number) \(.title)"' <<<"$REPORT"
 echo; echo "🔨 In progress (branch exists):"
 jq -r '.[] | select(.branch != null) | "   #\(.number) \(.title) · \(.branch)"' <<<"$REPORT"
@@ -62,6 +65,8 @@ jq -r '. as $all | map(select(.human))
   | sort_by(-.blocks) | .[]
   | "   #\(.number) \(.title) · unblocks \(.blocks)"
     + (if (.unresolved|length) > 0 then " · waiting on " + ([.unresolved[].n | "#\(.)"] | join(", ")) else "" end)' <<<"$REPORT"
+echo; echo "⏸  On hold (do not start):"
+jq -r '.[] | select(.hold and (.human|not)) | "   #\(.number) \(.title)"' <<<"$REPORT"
 echo; echo "⛔ Blocked (do not start):"
-jq -r '.[] | select((.human|not) and (.unresolved|length > 0))
+jq -r '.[] | select((.human|not) and (.hold|not) and (.unresolved|length > 0))
   | "   #\(.number) \(.title) ← " + ([.unresolved[] | "#\(.n) \(.why)"] | join(", "))' <<<"$REPORT"
