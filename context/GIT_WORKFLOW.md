@@ -123,8 +123,10 @@ This confirms you're in the right folder, on the right branch, for the right iss
 - **CI must pass. GitHub blocks the merge otherwise** (required status checks): typecheck → lint → unit + integration tests with coverage → build → Playwright E2E.
 - **No tests, no merge.** A PR that adds or changes behavior without tests gets sent back, even if CI is green.
 - **Merging (never `git merge` locally; merges only happen on GitHub):**
-  - Ticket agents never merge.
-  - The **coordinating Claude session** (main folder, on `dev`) reviews the PR including its tests, waits for CI to go green, then runs `gh pr merge <PR#> --squash`, then `./scripts/ticket-cleanup.sh <issue>`.
+  - **Ticket PRs into `dev` auto-merge.** After opening the PR, the ticket agent runs `gh pr merge <PR#> --auto --squash`. GitHub squash-merges it as soon as required checks pass. Nobody merges ticket PRs by hand.
+  - Agents never merge any other way (no `git merge`, no `gh pr merge` without `--auto`).
+  - The **only manual merge** is the final `dev` → `main` release PR, done by the human.
+  - After the auto-merge lands, the human (or coordinating session) runs `./scripts/ticket-cleanup.sh <issue>`.
   - If `dev` moved and the PR isn't up to date, rebase the ticket branch (`git rebase origin/dev` in its worktree), push with `--force-with-lease`, and let CI rerun.
 
 ---
@@ -519,6 +521,7 @@ export default defineConfig({
 - [ ] Branch protection on `main` and `dev`: require a PR (**0 required approvals**: you can't approve your own PR), block force pushes, and **require these status checks to pass before merging**: `typecheck`, `lint`, `test` (with coverage), `build`, `e2e`
 - [ ] "Require branches to be up to date before merging" (tests run against the latest `dev`)
 - [ ] Merge buttons: allow **squash** (tickets) and **merge commit** (releases)
+- [ ] Turn on **"Allow auto-merge"** (ticket PRs into `dev` merge themselves once checks pass)
 - [ ] Turn on "Automatically delete head branches" (cleanup handles it either way)
 
 ### `.gitignore`
@@ -571,7 +574,9 @@ test-results/
   mapped to acceptance criteria. Never call real external APIs in tests. Never use `.skip` or `.only`.
 - Run `npm run verify` and make it pass before opening a PR. Never weaken a test or lower a
   coverage threshold to make CI pass.
-- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR. Never run `git merge`.
+- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in, then enable auto-merge:
+  `gh pr merge <PR#> --auto --squash`. Never merge any other way. Never run `git merge`.
+- Log assumptions in `context/assumptions.md` (see CLAUDE.md).
 - Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
 ```
 

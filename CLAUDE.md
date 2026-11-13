@@ -52,5 +52,14 @@ End every commit message and PR description with its own body text. Leave out al
   mapped to acceptance criteria. Never call real external APIs in tests. Never use `.skip` or `.only`.
 - Run `npm run verify` and make it pass before opening a PR. Never weaken a test or lower a
   coverage threshold to make CI pass.
-- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in. Never merge your own PR. Never run `git merge`.
+- Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in, then enable auto-merge:
+  `gh pr merge <PR#> --auto --squash`. All ticket PRs into `dev` auto-merge once CI passes; the human does
+  not merge them by hand. Never merge any other way. Never run `git merge`.
+- The only manual merge is the final `dev` → `main` release PR, done by the human.
 - Never run cleanup; the human runs `./scripts/ticket-cleanup.sh <issue>` after merge.
+
+## Assumptions log
+When you make an assumption, deviate from a ticket's wording, or pick a default the docs didn't specify,
+add a row to `context/assumptions.md` in the same PR: ticket number, the assumption, and a label:
+`need to review` (human must confirm; could be wrong or costly) or `nice to know` (low risk, FYI).
+Since PRs auto-merge, this file is how the human catches decisions after the fact.
