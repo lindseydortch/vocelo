@@ -1,0 +1,49 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.landing {
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: $space-7 $space-5;
+  color: $color-text;
+
+  @include mobile {
+    padding: $space-5 $space-4;
+  }
+}
+
+.section {
+  margin-bottom: $space-8;
+}
+
+.cta {
+  display: inline-block;
+  padding: $space-3 $space-5;
+  border: 0.1rem solid $color-primary;
+  color: $color-text;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-5;
+  padding: 0;
+  list-style: none;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  padding: 0;
+  list-style: none;
+}
+
+.faqItem {
+  padding: $space-3 0;
+  border-bottom: 0.1rem solid $color-border;
+}
