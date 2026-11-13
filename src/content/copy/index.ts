@@ -1,0 +1,8 @@
+export { authCopy } from './auth'
+export { bufferCopy } from './buffer'
+export { billingCopy } from './billing'
+export { composerCopy } from './composer'
+export { personasCopy } from './personas'
+export { analysisCopy } from './analysis'
+export { versionsCopy } from './versions'
+export { pagesCopy } from './pages'
