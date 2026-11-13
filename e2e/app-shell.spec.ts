@@ -5,13 +5,13 @@ test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test.beforeEach(async ({ page }) => {
-    await signInAs(page, 'free', { dbOff: true })
+    await signInAs(page, 'free')
   })
 
   const pages = [
     { link: 'Personas', path: '/app/personas', h1: 'Personas' },
     { link: 'Settings', path: '/app/settings', h1: 'Settings' },
-    { link: 'Posts', path: '/app', h1: 'Vocelo' },
+    { link: 'Posts', path: '/app', h1: 'Posts' },
   ]
 
   test('nav links reach each page and mark the current section', async ({
@@ -59,7 +59,7 @@ test.describe('desktop', () => {
 for (const path of ['/app', '/app/personas', '/app/settings']) {
   test(`no horizontal scroll at 375px on ${path}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 })
-    await signInAs(page, 'free', { dbOff: true })
+    await signInAs(page, 'free')
     await page.goto(path)
     const overflow = await page.evaluate(
       () =>

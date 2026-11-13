@@ -3,7 +3,7 @@ import { signInAs } from './helpers/auth'
 
 test.describe('checkout canceled', () => {
   test('renders and links back to /pricing', async ({ page }) => {
-    await signInAs(page, 'free', { dbOff: true })
+    await signInAs(page, 'free')
 
     await page.goto('/app/billing/canceled')
     await expect(

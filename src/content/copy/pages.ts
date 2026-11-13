@@ -52,6 +52,14 @@ export const pagesCopy = {
     body: 'An unexpected error occurred.',
     reference: 'Reference:',
   },
+  dashboard: {
+    title: 'Vocelo',
+    heading: 'Posts',
+    newPost: 'New post',
+    emptyPost: 'Empty post',
+    edited: 'Edited',
+    sample: 'Sample',
+  },
   appShell: {
     brand: 'Vocelo',
     navLabel: 'Main',

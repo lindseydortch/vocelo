@@ -16,11 +16,11 @@ test('signed-out visit to /app lands on /signin with returnTo', async ({
 test('signed-in user reaches /app and is bounced off /signin', async ({
   page,
 }) => {
-  await signInAs(page, 'free', { dbOff: true })
+  await signInAs(page, 'free')
   await page.goto('/app')
   await expect(page).toHaveURL(/\/app$/)
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Vocelo' }),
+    page.getByRole('heading', { level: 1, name: 'Posts' }),
   ).toBeVisible()
   await page.goto('/signin')
   await expect(page).toHaveURL(/\/app$/)
@@ -29,7 +29,7 @@ test('signed-in user reaches /app and is bounced off /signin', async ({
 test('sign out lands on / and /app then redirects to /signin', async ({
   page,
 }) => {
-  await signInAs(page, 'free', { dbOff: true })
+  await signInAs(page, 'free')
   await page.goto('/app/settings')
   // The button only works after hydration.
   await page.waitForLoadState('networkidle')
