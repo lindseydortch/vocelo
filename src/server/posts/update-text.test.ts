@@ -253,6 +253,51 @@ describe('updatePostText', () => {
     expect((await stored(post.id)).text).toBe(post.text)
   })
 
+  it('conflicts on a stale base even when the text is unchanged', async () => {
+    const { post } = await setup()
+    const result = await updatePostText({
+      data: {
+        postId: post.id,
+        text: post.text,
+        baseEditedAt: new Date(
+          post.lastEditedAt.getTime() - 1000,
+        ).toISOString(),
+      },
+    })
+    expect(result).toMatchObject({ ok: false, code: 'EDIT_CONFLICT' })
+  })
+
+  it('treats base equal to last_edited_at as no conflict', async () => {
+    const { post } = await setup()
+    const result = await updatePostText({
+      data: {
+        postId: post.id,
+        text: 'Edited',
+        baseEditedAt: post.lastEditedAt.toISOString(),
+      },
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('normalizes before comparing, so CRLF-equal text is unchanged', async () => {
+    const { post } = await setup()
+    await testDb
+      .update(posts)
+      .set({ text: 'a\nb' })
+      .where(eq(posts.id, post.id))
+    const result = await updatePostText({
+      data: {
+        postId: post.id,
+        text: 'a\r\nb',
+        baseEditedAt: post.lastEditedAt.toISOString(),
+      },
+    })
+    expect(result).toEqual({
+      ok: true,
+      lastEditedAt: post.lastEditedAt.toISOString(),
+    })
+  })
+
   it('force skips the conflict check ("Keep mine")', async () => {
     const { post } = await setup()
     const result = await updatePostText({
