@@ -1,11 +1,16 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import { afterAll, describe, expect, it } from 'vitest'
 import { posts, users } from '~/db/schema'
-import { createDb } from '~/db/client'
-import { testDatabaseUrl } from './db'
+import { createTestSql } from './db'
+import { freezeTime } from './clock'
 import { createTestPost, createTestUser, resetFactoryData } from './factories'
 
-const db = createDb(testDatabaseUrl())
+const sql = createTestSql()
+const db = drizzle(sql, { casing: 'snake_case' })
+afterAll(async () => {
+  await sql.end()
+})
 
 describe('createTestUser', () => {
   it('defaults to a Free user with no Stripe data', async () => {
@@ -43,6 +48,12 @@ describe('createTestUser', () => {
       expect(user.subscriptionStatus).toBe(subscriptionStatus)
     },
   )
+
+  it('uses the project clock for the Creator period', async () => {
+    freezeTime('2026-03-01T00:00:00Z')
+    const user = await createTestUser({ plan: 'creator' })
+    expect(user.currentPeriodStart).toEqual(new Date('2026-03-01T00:00:00Z'))
+  })
 
   it('honors periodAnchorAt', async () => {
     const periodAnchorAt = new Date('2026-01-15T00:00:00Z')
@@ -110,18 +121,21 @@ describe('resetFactoryData', () => {
       .returning()
     const other = maybeOther!
 
-    await resetFactoryData()
+    try {
+      await resetFactoryData()
 
-    expect(await db.select().from(users).where(eq(users.id, mine.id))).toEqual(
-      [],
-    )
-    expect(await db.select().from(posts).where(eq(posts.id, post.id))).toEqual(
-      [],
-    )
-    expect(
-      await db.select().from(users).where(eq(users.id, other.id)),
-    ).toHaveLength(1)
-    await db.delete(users).where(eq(users.id, other.id))
+      expect(
+        await db.select().from(users).where(eq(users.id, mine.id)),
+      ).toEqual([])
+      expect(
+        await db.select().from(posts).where(eq(posts.id, post.id)),
+      ).toEqual([])
+      expect(
+        await db.select().from(users).where(eq(users.id, other.id)),
+      ).toHaveLength(1)
+    } finally {
+      await db.delete(users).where(eq(users.id, other.id))
+    }
   })
 
   it('is a no-op when nothing was created', async () => {

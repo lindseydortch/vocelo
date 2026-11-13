@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { inArray } from 'drizzle-orm'
 import { posts, users } from '~/db/schema'
-import { createDb } from '~/db/client'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import { now } from '~/lib/clock'
+import { registerCleanup } from './cleanup'
 import { testDatabaseUrl } from './db'
 
 export type TestPlan = 'free' | 'creator'
@@ -11,12 +14,17 @@ export type TestSubscriptionStatus =
 export type TestUser = typeof users.$inferSelect
 export type TestPost = typeof posts.$inferSelect
 
-let client: ReturnType<typeof createDb> | undefined
+let sql: ReturnType<typeof postgres> | undefined
+let client: ReturnType<typeof drizzle> | undefined
 const createdUserIds = new Set<string>()
 
 /** Drizzle client on the embedded test database; one per test file. */
 function testDb() {
-  client ??= createDb(testDatabaseUrl())
+  if (!client) {
+    sql = postgres(testDatabaseUrl(), { max: 2, prepare: false })
+    client = drizzle(sql, { casing: 'snake_case' })
+    registerCleanup(resetFactoryData)
+  }
   return client
 }
 
@@ -42,7 +50,7 @@ export async function createTestUser(
     )
   }
   const suffix = randomUUID()
-  const anchor = input.periodAnchorAt ?? new Date()
+  const anchor = input.periodAnchorAt ?? now()
   const paid =
     plan === 'creator'
       ? {
@@ -106,12 +114,16 @@ export async function createTestPost(
  * so parallel test files never delete each other's data.
  */
 export async function resetFactoryData(): Promise<void> {
-  if (!client) return
+  if (!client || !sql) return
   const ids = [...createdUserIds]
   createdUserIds.clear()
+  const open = sql
+  const db = client
+  client = undefined
+  sql = undefined
   try {
-    if (ids.length) await client.delete(users).where(inArray(users.id, ids))
+    if (ids.length) await db.delete(users).where(inArray(users.id, ids))
   } finally {
-    client = undefined
+    await open?.end()
   }
 }
