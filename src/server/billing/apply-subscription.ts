@@ -10,6 +10,7 @@ import { toBillingError } from './customer'
 import { stripe } from './stripe'
 
 type User = typeof users.$inferSelect
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 /** Statuses that end a paid period and start a fresh Free one. */
 const ENDED = ['canceled', 'unpaid', 'paused', 'incomplete_expired']
@@ -55,11 +56,12 @@ async function findUser(
  * The only writer of the user's subscription columns. Always re-fetches the
  * subscription from Stripe (never trusts an event payload), so a late or
  * out-of-order event can't roll state back. Returns whether a user row was
- * updated; false for an ignored, unmatched, `incomplete` or duplicate
+ * updated (inside `outerTx` when given); false for an ignored, unmatched, `incomplete` or duplicate
  * subscription.
  */
 export async function applySubscription(
   subscriptionId: string,
+  outerTx?: DbTransaction,
 ): Promise<boolean> {
   const sub = await fetchSubscription(subscriptionId)
   const requestId = newRequestId()
@@ -67,7 +69,7 @@ export async function applySubscription(
   const ended = ENDED.includes(sub.status)
   if (!paid && !ended) return false // incomplete: no change
 
-  return db.transaction(async (tx) => {
+  const run = async (tx: DbTransaction) => {
     const user = await findUser(tx, sub, requestId)
     if (!user) {
       console.warn('[billing] no user for subscription, ignored', {
@@ -115,5 +117,7 @@ export async function applySubscription(
       })
       .where(eq(users.id, user.id))
     return true
-  })
+  }
+  // The webhook passes its own transaction so the event row commits with the update.
+  return outerTx ? run(outerTx) : db.transaction(run)
 }

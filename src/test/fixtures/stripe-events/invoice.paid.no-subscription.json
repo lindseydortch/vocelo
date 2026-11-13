@@ -1,0 +1,16 @@
+{
+  "id": "evt_fixture",
+  "object": "event",
+  "api_version": "2026-10-28.endive",
+  "created": 1760000000,
+  "type": "invoice.paid",
+  "livemode": false,
+  "data": {
+    "object": {
+      "id": "in_fixture",
+      "object": "invoice",
+      "customer": "cus_fixture",
+      "parent": null
+    }
+  }
+}
