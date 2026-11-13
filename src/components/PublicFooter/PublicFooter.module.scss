@@ -1,0 +1,13 @@
+@use '../../styles/variables' as *;
+
+.footer {
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: $space-5;
+  border-top: 0.1rem solid $color-border;
+}
+
+.links {
+  display: flex;
+  gap: $space-4;
+}
