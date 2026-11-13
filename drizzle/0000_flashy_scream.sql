@@ -115,4 +115,8 @@ ALTER TABLE "reactions" ADD CONSTRAINT "reactions_persona_id_personas_id_fk" FOR
 ALTER TABLE "tone_reads" ADD CONSTRAINT "tone_reads_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_events" ADD CONSTRAINT "usage_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_events" ADD CONSTRAINT "usage_events_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "versions" ADD CONSTRAINT "versions_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "versions" ADD CONSTRAINT "versions_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "posts_user_last_edited_idx" ON "posts" USING btree ("user_id","last_edited_at");--> statement-breakpoint
+CREATE INDEX "usage_events_user_created_idx" ON "usage_events" USING btree ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX "users_stripe_customer_idx" ON "users" USING btree ("stripe_customer_id");--> statement-breakpoint
+CREATE INDEX "users_stripe_subscription_idx" ON "users" USING btree ("stripe_subscription_id");

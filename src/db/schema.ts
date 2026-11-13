@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -27,22 +28,29 @@ export const bufferStatus = pgEnum('buffer_status', [
 
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow()
 
-export const users = pgTable('users', {
-  id: uuid().primaryKey().defaultRandom(),
-  bufferAccountId: text().notNull().unique('users_buffer_account_id_unique'),
-  email: text(),
-  bufferOrganizationId: text().notNull(),
-  timezone: text(),
-  plan: text().notNull().default('free'),
-  stripeCustomerId: text(),
-  stripeSubscriptionId: text(),
-  subscriptionStatus: text(),
-  currentPeriodStart: timestamp({ withTimezone: true }),
-  currentPeriodEnd: timestamp({ withTimezone: true }),
-  cancelAtPeriodEnd: boolean().notNull().default(false),
-  periodAnchorAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  createdAt: createdAt(),
-})
+export const users = pgTable(
+  'users',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    bufferAccountId: text().notNull().unique('users_buffer_account_id_unique'),
+    email: text(),
+    bufferOrganizationId: text().notNull(),
+    timezone: text(),
+    plan: text().notNull().default('free'),
+    stripeCustomerId: text(),
+    stripeSubscriptionId: text(),
+    subscriptionStatus: text(),
+    currentPeriodStart: timestamp({ withTimezone: true }),
+    currentPeriodEnd: timestamp({ withTimezone: true }),
+    cancelAtPeriodEnd: boolean().notNull().default(false),
+    periodAnchorAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('users_stripe_customer_idx').on(t.stripeCustomerId),
+    index('users_stripe_subscription_idx').on(t.stripeSubscriptionId),
+  ],
+)
 
 export const bufferConnections = pgTable('buffer_connections', {
   userId: uuid()
@@ -52,7 +60,10 @@ export const bufferConnections = pgTable('buffer_connections', {
   refreshTokenEnc: text(),
   accessExpiresAt: timestamp({ withTimezone: true }),
   scopes: text(),
-  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp({ withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 })
 
 export const posts = pgTable(
@@ -74,7 +85,10 @@ export const posts = pgTable(
     createdAt: createdAt(),
     lastEditedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('posts_user_buffer_post_unique').on(t.userId, t.bufferPostId)],
+  (t) => [
+    unique('posts_user_buffer_post_unique').on(t.userId, t.bufferPostId),
+    index('posts_user_last_edited_idx').on(t.userId, t.lastEditedAt),
+  ],
 )
 
 export const versions = pgTable('versions', {
@@ -97,7 +111,10 @@ export const personas = pgTable('personas', {
   elevenlabsVoiceId: text().notNull(),
   readerDescription: text().notNull(),
   createdAt: createdAt(),
-  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp({ withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
   deletedAt: timestamp({ withTimezone: true }),
 })
 
@@ -152,17 +169,21 @@ export const toneReads = pgTable(
   ],
 )
 
-export const usageEvents = pgTable('usage_events', {
-  id: uuid().primaryKey().defaultRandom(),
-  userId: uuid()
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  kind: usageKind().notNull(),
-  amount: integer().notNull(),
-  // Deleting a post never refunds usage: keep the row, drop the link.
-  postId: uuid().references(() => posts.id, { onDelete: 'set null' }),
-  createdAt: createdAt(),
-})
+export const usageEvents = pgTable(
+  'usage_events',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: usageKind().notNull(),
+    amount: integer().notNull(),
+    // Deleting a post never refunds usage: keep the row, drop the link.
+    postId: uuid().references(() => posts.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('usage_events_user_created_idx').on(t.userId, t.createdAt)],
+)
 
 export const stripeEvents = pgTable('stripe_events', {
   id: text().primaryKey(),

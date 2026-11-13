@@ -1,5 +1,5 @@
 {
-  "id": "c84ec8fc-5009-4a5d-baf0-e5631e90242a",
+  "id": "dc04816e-8c59-4f2a-a6a1-8f58653fdc01",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -246,7 +246,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "posts_user_last_edited_idx": {
+          "name": "posts_user_last_edited_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "last_edited_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "posts_user_id_users_id_fk": {
           "name": "posts_user_id_users_id_fk",
@@ -555,7 +577,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "usage_events_user_created_idx": {
+          "name": "usage_events_user_created_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "usage_events_user_id_users_id_fk": {
           "name": "usage_events_user_id_users_id_fk",
@@ -684,7 +728,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_stripe_customer_idx": {
+          "name": "users_stripe_customer_idx",
+          "columns": [
+            {
+              "expression": "stripe_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_stripe_subscription_idx": {
+          "name": "users_stripe_subscription_idx",
+          "columns": [
+            {
+              "expression": "stripe_subscription_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

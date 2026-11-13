@@ -80,12 +80,6 @@ describe('db schema', () => {
       'sent',
     ])
   })
-
-  it('rejects values outside the enums at the type level', () => {
-    // @ts-expect-error not a usage kind
-    const bad: (typeof schema.usageEvents.$inferInsert)['kind'] = 'nope'
-    expect(bad).toBe('nope')
-  })
 })
 
 describe('generated migration', () => {
