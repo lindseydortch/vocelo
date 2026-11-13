@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import styles from './index.module.scss'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -6,9 +7,9 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   return (
-    <main>
+    <main className={styles.page}>
       <h1>Vocelo</h1>
-      <p>Placeholder home page.</p>
+      <p className={styles.note}>Placeholder home page.</p>
     </main>
   )
 }

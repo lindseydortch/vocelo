@@ -1,0 +1,12 @@
+@use 'variables' as *;
+
+html {
+  font-size: 62.5%; // 1rem = 10px
+}
+
+body {
+  margin: 0;
+  font-size: 1.6rem; // restore 16px body text
+  color: $color-text;
+  background: $color-bg;
+}
