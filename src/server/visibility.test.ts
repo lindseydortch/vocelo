@@ -76,14 +76,12 @@ describe('history window', () => {
     const other = await createTestUser()
     const post = await createTestPost({ user })
     for (let day = 1; day <= 4; day++) {
-      await db
-        .insert(versions)
-        .values({
-          postId: post.id,
-          text: `v${day}`,
-          textHash: `hash${day}`,
-          createdAt: new Date(`2026-01-0${day}T00:00:00Z`),
-        })
+      await db.insert(versions).values({
+        postId: post.id,
+        text: `v${day}`,
+        textHash: `hash${day}`,
+        createdAt: new Date(`2026-01-0${day}T00:00:00Z`),
+      })
     }
     expect(
       (await visibleVersions(user, post.id)).map((version) => version.text),
@@ -116,5 +114,25 @@ describe('history window', () => {
     const visible = await db.select().from(posts).where(visiblePostsWhere(user))
     expect(visible.map((post) => post.id)).toEqual([boundary.id])
     expect(await visibleVersions(user, old.id)).toEqual([])
+  })
+  it('uses a clamped 12-month boundary for Creator on leap day', async () => {
+    setClock(() => new Date('2024-02-29T12:00:00Z'))
+    const user = await createTestUser({ plan: 'creator' })
+    const boundary = await createTestPost({
+      user,
+      lastEditedAt: new Date('2023-02-28T12:00:00Z'),
+    })
+    const newer = await createTestPost({
+      user,
+      lastEditedAt: new Date('2023-02-28T12:00:01Z'),
+    })
+    await createTestPost({
+      user,
+      lastEditedAt: new Date('2023-02-28T11:59:59Z'),
+    })
+    const visible = await db.select().from(posts).where(visiblePostsWhere(user))
+    expect(visible.map((post) => post.id).sort()).toEqual(
+      [boundary.id, newer.id].sort(),
+    )
   })
 })

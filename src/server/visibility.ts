@@ -12,7 +12,9 @@ type VisibilityUser = Pick<
 export function visiblePostsWhere(user: VisibilityUser) {
   const cutoff = now()
   if (getEffectivePlan(user) === 'creator') {
+    const month = cutoff.getUTCMonth()
     cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1)
+    if (cutoff.getUTCMonth() !== month) cutoff.setUTCDate(0)
   } else {
     cutoff.setUTCDate(cutoff.getUTCDate() - 30)
   }
