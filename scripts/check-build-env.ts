@@ -1,3 +1,6 @@
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 // Run first in the Netlify build. E2E_AUTH enables the /__test/login helper,
 // so a deploy built with it set must never ship.
 export function checkBuildEnv(env: NodeJS.ProcessEnv): string | null {
@@ -8,10 +11,11 @@ export function checkBuildEnv(env: NodeJS.ProcessEnv): string | null {
 }
 
 // Node 24 runs this file directly (type stripping); skip when imported by tests.
-if (
-  process.argv[1] &&
-  import.meta.url === new URL(`file://${process.argv[1]}`).href
-) {
+const isEntry =
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+
+if (isEntry) {
   const error = checkBuildEnv(process.env)
   if (error) {
     console.error(`check-build-env: ${error}`)

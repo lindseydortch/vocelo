@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { checkBuildEnv } from './check-build-env'
 
-const script = new URL('./check-build-env.ts', import.meta.url).pathname
+const script = fileURLToPath(new URL('./check-build-env.ts', import.meta.url))
 
 function run(env: Record<string, string>) {
   return spawnSync(process.execPath, [script], {
