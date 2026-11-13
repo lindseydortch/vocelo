@@ -22,3 +22,4 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 | #154 | need to review | Turned on the repo setting "Automatically delete head branches" via the API. | open |
 | #10 | nice to know | Spacing scale is `$space-1`..`$space-8` (0.4rem to 6.4rem); the ticket only said "a rem spacing scale". | open |
 | #10 | nice to know | Placeholder tone colors are grays; the page also sets `body { margin: 0 }` and token colors. Verified via built CSS and SSR output, not a browser (self-signed dev cert blocks the devtools browser). | open |
+| #11 | nice to know | No README existed, so I created a minimal one for the Playwright install note. `verify` has no lint step yet (lint ticket not landed); E2E is last. | open |
