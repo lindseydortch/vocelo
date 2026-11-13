@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91__testChar93LoginRoute = Char91__testChar93LoginRouteImport.update({
+  id: '/__test/login',
+  path: '/__test/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/__test/login': typeof Char91__testChar93LoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/__test/login': typeof Char91__testChar93LoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/__test/login': typeof Char91__testChar93LoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/__test/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/__test/login'
+  id: '__root__' | '/' | '/__test/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/__test/login': {
+      id: '/__test/login'
+      path: '/__test/login'
+      fullPath: '/__test/login'
+      preLoaderRoute: typeof Char91__testChar93LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
