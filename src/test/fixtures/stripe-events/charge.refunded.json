@@ -1,0 +1,15 @@
+{
+  "id": "evt_fixture",
+  "object": "event",
+  "api_version": "2026-10-28.endive",
+  "created": 1760000000,
+  "type": "charge.refunded",
+  "livemode": false,
+  "data": {
+    "object": {
+      "id": "ch_fixture",
+      "object": "charge",
+      "customer": "cus_fixture"
+    }
+  }
+}

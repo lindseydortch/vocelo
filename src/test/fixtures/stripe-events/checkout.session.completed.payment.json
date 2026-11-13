@@ -1,0 +1,17 @@
+{
+  "id": "evt_fixture",
+  "object": "event",
+  "api_version": "2026-10-28.endive",
+  "created": 1760000000,
+  "type": "checkout.session.completed",
+  "livemode": false,
+  "data": {
+    "object": {
+      "id": "cs_fixture",
+      "object": "checkout.session",
+      "mode": "payment",
+      "customer": "cus_fixture",
+      "subscription": null
+    }
+  }
+}

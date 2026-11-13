@@ -21,6 +21,7 @@ import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].l
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AuthErrorRouteImport } from './routes/auth/error'
 import { Route as ApiAudioKeyRouteImport } from './routes/api/audio/$key'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as AppBillingCanceledRouteImport } from './routes/app/billing/canceled'
 import { Route as AppPersonasIndexRouteImport } from './routes/app/personas/index'
 import { Route as AppPostsIdRouteImport } from './routes/app/posts/$id'
@@ -87,6 +88,11 @@ const ApiAudioKeyRoute = ApiAudioKeyRouteImport.update({
   path: '/api/audio/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppBillingCanceledRoute = AppBillingCanceledRouteImport.update({
   id: '/billing/canceled',
   path: '/billing/canceled',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/auth/error': typeof AuthErrorRoute
   '/app/': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/app/posts/$id': typeof AppPostsIdRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/auth/error': typeof AuthErrorRoute
   '/app': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/app/posts/$id': typeof AppPostsIdRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/auth/error': typeof AuthErrorRoute
   '/app/': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
   '/app/posts/$id': typeof AppPostsIdRoute
   '/auth/buffer/start': typeof AuthBufferStartRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/auth/error'
     | '/app/'
     | '/api/audio/$key'
+    | '/api/stripe/webhook'
     | '/app/billing/canceled'
     | '/app/posts/$id'
     | '/auth/buffer/start'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/auth/error'
     | '/app'
     | '/api/audio/$key'
+    | '/api/stripe/webhook'
     | '/app/billing/canceled'
     | '/app/posts/$id'
     | '/auth/buffer/start'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/auth/error'
     | '/app/'
     | '/api/audio/$key'
+    | '/api/stripe/webhook'
     | '/app/billing/canceled'
     | '/app/posts/$id'
     | '/auth/buffer/start'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
   AuthErrorRoute: typeof AuthErrorRoute
   ApiAudioKeyRoute: typeof ApiAudioKeyRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   AuthBufferStartRoute: typeof AuthBufferStartRoute
 }
 
@@ -330,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAudioKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/billing/canceled': {
       id: '/app/billing/canceled'
       path: '/billing/canceled'
@@ -400,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
   AuthErrorRoute: AuthErrorRoute,
   ApiAudioKeyRoute: ApiAudioKeyRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   AuthBufferStartRoute: AuthBufferStartRoute,
 }
 export const routeTree = rootRouteImport
