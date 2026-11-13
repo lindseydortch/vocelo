@@ -61,6 +61,21 @@ describe('getChannel', () => {
   })
 })
 
+describe('channel queries', () => {
+  it.each([
+    ['listChannels', () => listChannels('tok', 'org1')],
+    ['getChannel', () => getChannel('tok', 'ch1')],
+  ])('%s lets temporary errors through', async (_name, run) => {
+    server.use(
+      http.post(
+        BUFFER_GRAPHQL_URL,
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    await expect(run()).rejects.toBeInstanceOf(BufferTemporaryError)
+  })
+})
+
 describe('getPost', () => {
   it('maps a post, counting assets and keeping channel flags', async () => {
     respond({ post })
@@ -109,6 +124,11 @@ describe('getPost', () => {
     await expect(getPost('tok', 'p1')).resolves.toBeNull()
   })
 
+  it('returns null when the post comes back empty', async () => {
+    respond({ post: null })
+    await expect(getPost('tok', 'p1')).resolves.toBeNull()
+  })
+
   it('throws BufferUnknownStatusError on an unknown status', async () => {
     respond({ post: { ...post, status: 'banana' } })
     await expect(getPost('tok', 'p1')).rejects.toBeInstanceOf(
@@ -154,7 +174,8 @@ describe('listDraftPosts', () => {
       channelIds: ['ch1'],
       first: 20,
     })
-    expect(body?.query).toMatch(/draft/)
+    expect(body?.query).toMatch(/status: \[draft\]/)
+    expect(body?.query).toMatch(/channelIds: \$channelIds/)
   })
 
   it('honors a custom first', async () => {

@@ -1,16 +1,9 @@
-import type { bufferStatus } from '~/db/schema'
+import { bufferStatus } from '~/db/schema'
 import { BufferRequestError, bufferRequest } from './client'
 
 export type BufferStatus = (typeof bufferStatus.enumValues)[number]
 
-const STATUSES: readonly BufferStatus[] = [
-  'draft',
-  'needs_approval',
-  'scheduled',
-  'sending',
-  'sent',
-  'error',
-]
+const STATUSES: readonly string[] = bufferStatus.enumValues
 
 /** Buffer returned a post status our `buffer_status` enum doesn't have. */
 export class BufferUnknownStatusError extends Error {
@@ -31,6 +24,8 @@ export type BufferChannel = {
   isLocked: boolean
 }
 
+type PostChannel = { id: string; isDisconnected: boolean; isLocked: boolean }
+
 export type BufferPost = {
   id: string
   status: BufferStatus
@@ -38,7 +33,7 @@ export type BufferPost = {
   text: string
   error: { message: string } | null
   assetCount: number
-  channel: { id: string; isDisconnected: boolean; isLocked: boolean }
+  channel: PostChannel
 }
 
 type RawPost = {
@@ -48,14 +43,14 @@ type RawPost = {
   text: string
   error: { message: string } | null
   assets: unknown[] | null
-  channel: { id: string; isDisconnected: boolean; isLocked: boolean }
+  channel: PostChannel
 }
 
 const CHANNEL_FIELDS = `id name displayName service type timezone isDisconnected isLocked`
 const POST_FIELDS = `id status dueAt text error { message } assets { id } channel { id isDisconnected isLocked }`
 
 function mapStatus(status: string): BufferStatus {
-  if ((STATUSES as readonly string[]).includes(status)) {
+  if (STATUSES.includes(status)) {
     return status as BufferStatus
   }
   throw new BufferUnknownStatusError(status)
@@ -107,14 +102,14 @@ export async function getPost(
   id: string,
 ): Promise<BufferPost | null> {
   try {
-    const data = await bufferRequest<{ post: RawPost }>({
+    const data = await bufferRequest<{ post: RawPost | null }>({
       accessToken,
       query: `query Post($id: PostId!) {
   post(input: { id: $id }) { ${POST_FIELDS} }
 }`,
       variables: { id },
     })
-    return mapPost(data.post)
+    return data.post ? mapPost(data.post) : null
   } catch (error) {
     if (
       error instanceof BufferRequestError &&
@@ -126,7 +121,7 @@ export async function getPost(
   }
 }
 
-/** Newest drafts first, in the given channels. Never cached (import list). */
+/** Drafts in the given channels, in Buffer's default order (no `sort` sent yet). Never cached. */
 export async function listDraftPosts(
   accessToken: string,
   orgId: string,
