@@ -2,6 +2,7 @@ import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import EmbeddedPostgres from 'embedded-postgres'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
@@ -36,7 +37,13 @@ export function sweepStaleDataDirs(
   now: number = Date.now(),
 ): string[] {
   const removed: string[] = []
-  for (const name of readdirSync(root)) {
+  let names: string[]
+  try {
+    names = readdirSync(root)
+  } catch {
+    return removed
+  }
+  for (const name of names) {
     if (!name.startsWith(DIR_PREFIX)) continue
     const path = join(root, name)
     try {
@@ -82,7 +89,11 @@ export default async function setup(project: TestProject) {
     const url = `postgres://postgres:postgres@127.0.0.1:${port}/${dbName}`
     const sql = postgres(url, { max: 1 })
     try {
-      await migrate(drizzle(sql), { migrationsFolder: './drizzle' })
+      await migrate(drizzle(sql), {
+        migrationsFolder: fileURLToPath(
+          new URL('../../drizzle', import.meta.url),
+        ),
+      })
     } finally {
       await sql.end()
     }

@@ -58,10 +58,10 @@ describe('embedded Postgres harness', () => {
     }
   })
 
-  it('picks distinct free ports for concurrent runs', async () => {
-    const [p1, p2] = await Promise.all([getFreePort(), getFreePort()])
-    expect(p1).toBeGreaterThan(0)
-    expect(p2).toBeGreaterThan(0)
+  it('returns a usable free port', async () => {
+    const port = await getFreePort()
+    expect(port).toBeGreaterThan(1023)
+    expect(port).not.toBe(5432)
   })
 
   it('sweeps only stale vocelo-pg-* dirs older than 1 hour', () => {

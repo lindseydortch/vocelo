@@ -7,7 +7,7 @@ export function testDatabaseUrl(): string {
   return inject('testDatabaseUrl')
 }
 
-/** A Drizzle client on the test database. Call `close` when done. */
+/** A Drizzle client on the test database. */
 export function createTestDb() {
   const url = testDatabaseUrl()
   return { url, db: createDb(url) }
