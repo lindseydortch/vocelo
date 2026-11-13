@@ -13,7 +13,8 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   webServer: {
-    command: `E2E_AUTH=1 TTS_PROVIDER=fixture LLM_PROVIDER=fixture vite dev --port ${port}`,
+    // BUFFER_API_URL: a closed port, so Buffer is "down" for every server-side call
+    command: `E2E_AUTH=1 BUFFER_API_URL=http://127.0.0.1:9 TTS_PROVIDER=fixture LLM_PROVIDER=fixture vite dev --port ${port}`,
     url: `https://localhost:${port}`,
     ignoreHTTPSErrors: true,
     reuseExistingServer: !process.env.CI,

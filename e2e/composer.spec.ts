@@ -51,3 +51,26 @@ test('a post outside the history window redirects with a locked notice', async (
     'This post is locked on your plan',
   )
 })
+
+test('composer opens with a notice when Buffer is down', async ({ page }) => {
+  await signInAs(page, 'free')
+  const id = await insertPost({
+    owner: 'free',
+    bufferPostId: 'bp_e2e_down',
+    bufferStatus: 'scheduled',
+  })
+  const response = await page.goto(`/app/posts/${id}`)
+  expect(response?.status()).toBe(200)
+  await expect(page.locator('[data-slot="composer-left"]')).toBeVisible()
+  await expect(page.getByRole('status')).toHaveText(
+    "Couldn't check Buffer just now.",
+  )
+})
+
+test('a post with no Buffer post opens without a notice', async ({ page }) => {
+  await signInAs(page, 'free')
+  const id = await insertPost({ owner: 'free' })
+  await page.goto(`/app/posts/${id}`)
+  await expect(page.locator('[data-slot="composer-left"]')).toBeVisible()
+  await expect(page.getByRole('status')).toHaveCount(0)
+})

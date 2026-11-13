@@ -1,4 +1,9 @@
 export const BUFFER_GRAPHQL_URL = 'https://api.buffer.com'
+/** E2E only: `BUFFER_API_URL` points server-side Buffer calls at a stand-in (e.g. a closed port for "Buffer is down"). */
+const bufferUrl = () =>
+  process.env.E2E_AUTH === '1' && process.env.BUFFER_API_URL
+    ? process.env.BUFFER_API_URL
+    : BUFFER_GRAPHQL_URL
 export const LOW_RATE_LIMIT_THRESHOLD = 10
 
 /** Token rejected (HTTP 401 or `UNAUTHORIZED`). The caller decides whether to refresh. */
@@ -75,7 +80,7 @@ export async function bufferRequest<T = unknown>({
 }: BufferRequestOptions): Promise<T> {
   let res: Response
   try {
-    res = await fetch(BUFFER_GRAPHQL_URL, {
+    res = await fetch(bufferUrl(), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

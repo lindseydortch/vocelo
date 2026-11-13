@@ -15,7 +15,10 @@ vi.mock('@tanstack/react-start/server', () => ({
   },
 }))
 vi.mock('~/server/env', () => ({
-  env: { SESSION_SECRET: 'test-session-secret' },
+  env: {
+    SESSION_SECRET: 'test-session-secret',
+    TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+  },
 }))
 
 const sql = createTestSql()
