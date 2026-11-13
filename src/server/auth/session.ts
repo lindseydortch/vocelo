@@ -33,10 +33,22 @@ export class UnauthenticatedError extends Error {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+let keyCache: { secret: string; key: Buffer } | undefined
+
+/** Derived once per secret, so the hot path doesn't re-run HKDF. */
 function key(): Buffer {
-  return Buffer.from(
-    hkdfSync('sha256', env.SESSION_SECRET, 'vocelo-session', 'aes-256-gcm', 32),
-  )
+  const secret = env.SESSION_SECRET
+  if (keyCache?.secret !== secret) {
+    keyCache = {
+      secret,
+      key: Buffer.from(
+        hkdfSync('sha256', secret, 'vocelo-session', 'aes-256-gcm', 32),
+      ),
+    }
+  }
+  return keyCache.key
 }
 
 /** Encrypts and authenticates `{ userId, exp }`; the cookie reveals nothing and can't be edited. */
@@ -55,6 +67,7 @@ export function sealSession(userId: string, at: Date = now()): string {
 export function unsealSession(sealed: string, at: Date = now()): string | null {
   try {
     const raw = Buffer.from(sealed, 'base64url')
+    if (raw.length <= 28) return null
     const decipher = createDecipheriv('aes-256-gcm', key(), raw.subarray(0, 12))
     decipher.setAuthTag(raw.subarray(12, 28))
     const json = Buffer.concat([
@@ -65,7 +78,8 @@ export function unsealSession(sealed: string, at: Date = now()): string | null {
       userId?: unknown
       exp?: unknown
     }
-    if (typeof userId !== 'string' || typeof exp !== 'number') return null
+    if (typeof userId !== 'string' || !UUID.test(userId)) return null
+    if (typeof exp !== 'number') return null
     return exp > at.getTime() ? userId : null
   } catch {
     return null

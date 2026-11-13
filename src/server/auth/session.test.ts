@@ -49,6 +49,8 @@ const {
   unsealSession,
 } = await import('./session')
 
+const ID = '11111111-1111-4111-8111-111111111111'
+
 async function signedInUser() {
   const user = await createTestUser()
   await testDb
@@ -131,19 +133,28 @@ describe('session cookie', () => {
   })
 
   it('rejects a cookie sealed with a different secret and garbage input', () => {
-    const sealed = sealSession('abc')
+    const sealed = sealSession(ID)
     testEnv.SESSION_SECRET = 'another-secret'
     expect(unsealSession(sealed)).toBeNull()
     expect(unsealSession('not-a-cookie')).toBeNull()
+    expect(unsealSession('')).toBeNull()
   })
 
   it('rejects an expired cookie', () => {
-    const sealed = sealSession('abc', new Date('2026-01-01T00:00:00Z'))
+    const sealed = sealSession(ID, new Date('2026-01-01T00:00:00Z'))
     const later = new Date(
       new Date('2026-01-01T00:00:00Z').getTime() +
         (SESSION_MAX_AGE_SECONDS + 1) * 1000,
     )
     expect(unsealSession(sealed, later)).toBeNull()
+  })
+})
+
+describe('session cookie with a bad payload', () => {
+  it('reads as signed out (not a 500) when the sealed id is not a UUID', async () => {
+    jar.values.set(SESSION_COOKIE, sealSession('not-a-uuid'))
+    expect(await getSessionUser()).toBeNull()
+    expect(jar.values.has(SESSION_COOKIE)).toBe(false)
   })
 })
 
