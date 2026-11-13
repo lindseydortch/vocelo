@@ -18,6 +18,14 @@ export const anthropicHandlers = {
     http.post(ANTHROPIC_MESSAGES_URL, () =>
       HttpResponse.json(anthropicMessage(JSON.stringify(value))),
     ),
+  /** An Anthropic-shaped error response, e.g. `error(429, 'rate_limit_error')`. */
+  error: (status: number, type: string) =>
+    http.post(ANTHROPIC_MESSAGES_URL, () =>
+      HttpResponse.json(
+        { type: 'error', error: { type, message: type } },
+        { status },
+      ),
+    ),
   hang: () =>
     http.post(ANTHROPIC_MESSAGES_URL, async () => {
       await delay('infinite')
