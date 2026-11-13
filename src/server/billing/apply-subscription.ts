@@ -56,8 +56,8 @@ async function findUser(
  * The only writer of the user's subscription columns. Always re-fetches the
  * subscription from Stripe (never trusts an event payload), so a late or
  * out-of-order event can't roll state back. Returns whether a user row was
- * updated (inside `outerTx` when given); false for an ignored, unmatched, `incomplete` or duplicate
- * subscription.
+ * updated (inside `outerTx` when given); false for an ignored, unmatched,
+ * `incomplete` or duplicate subscription.
  */
 export async function applySubscription(
   subscriptionId: string,

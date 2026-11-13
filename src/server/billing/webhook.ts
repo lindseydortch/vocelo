@@ -7,7 +7,7 @@ import { env } from '~/server/env'
 import { applySubscription } from './apply-subscription'
 import { stripe } from './stripe'
 
-const id = (ref: string | { id: string } | null | undefined) =>
+const refId = (ref: string | { id: string } | null | undefined) =>
   typeof ref === 'string' ? ref : (ref?.id ?? null)
 
 /** The subscription an event is about, or null if it has none (or isn't one we handle). */
@@ -18,10 +18,10 @@ function subscriptionIdOf(event: Stripe.Event): string | null {
     case 'customer.subscription.deleted':
       return event.data.object.id
     case 'checkout.session.completed':
-      return id(event.data.object.subscription)
+      return refId(event.data.object.subscription)
     case 'invoice.paid':
     case 'invoice.payment_failed':
-      return id(event.data.object.parent?.subscription_details?.subscription)
+      return refId(event.data.object.parent?.subscription_details?.subscription)
     default:
       return null
   }
