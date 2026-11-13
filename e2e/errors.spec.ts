@@ -42,6 +42,7 @@ test.describe('signed out', () => {
       .poll(() => logged.some((l) => l.includes('[error]')))
       .toBe(true)
     expect(id).toMatch(/^[0-9a-f]{12}$/)
+    expect(logged.some((l) => l.includes(id))).toBe(true)
   })
 })
 
