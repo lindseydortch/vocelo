@@ -1,0 +1,13 @@
+# Only `main` deploys (production). Branch deploys and deploy previews are
+# turned off in the Netlify UI; see README.
+[build]
+  command = "node scripts/check-build-env.ts && vite build"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Migrate before building: a failed migration fails the build, so the previous
+# deploy keeps serving. DATABASE_URL comes from the Netlify environment.
+[context.production]
+  command = "node scripts/check-build-env.ts && drizzle-kit migrate && vite build"
