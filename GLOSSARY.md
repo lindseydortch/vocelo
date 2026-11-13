@@ -12,6 +12,10 @@ _Avoid_: Draft (when you mean the Vocelo side), note, content
 The copy of a Post that lives in the user's Buffer account. Vocelo's text wins when they differ.
 _Avoid_: Post (when you mean the Buffer side), Buffer post
 
+**Save draft**:
+Sending a Post's current text to its Buffer draft (creating the draft the first time). The only action that writes to Buffer and the only one that creates a Version. Text kept in Vocelo but not yet sent is "not in Buffer yet".
+_Avoid_: Save (on its own), sync, publish, unsaved (when you mean "not in Buffer yet")
+
 **Channel**:
 One connected social account in Buffer (e.g. a LinkedIn page, an X profile) that a Post is written for.
 _Avoid_: Profile, network, platform

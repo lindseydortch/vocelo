@@ -133,7 +133,7 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 ### History, versions, personas
 - History window measured from **`last_edited_at`**. Versions, reactions, and Tone reads follow their post's visibility.
 - **Free "last 3 versions" = hide, never delete.** Upgrading reveals the rest; downgrade needs no migration.
-- **A version is created only when "Save draft" succeeds in Buffer**, and only if the text changed. Restore loads text into the editor as unsaved; saving creates a new version (history is never rewritten).
+- **A version is created only when "Save draft" succeeds in Buffer**, and only if the text changed. Restore loads text into the editor; it autosaves to Vocelo (no version) and shows "Changes not in Buffer yet"; saving creates a new version (history is never rewritten). *(Updated in Step 6.)*
 - **Personas:** one table. Standard personas have `user_id = NULL` and are inserted by a **migration** (so production has them). Custom personas (Creator: 5) pick a voice from a hard-coded list of ~8 stock ElevenLabs voices; the user writes a "who is this reader" description that our template turns into the reaction prompt.
 - **Downgrade:** custom personas become locked (hidden, not deleted); their past reactions stay visible.
 - **Deleting a custom persona** = soft delete (`deleted_at`), so old reactions keep its name.
@@ -399,6 +399,51 @@ Step 5 drafts 15 tickets (`context/tickets/05-billing.md`).
 
 ---
 
+## Step 6 Decisions: Composer (agreed 2026-11-12)
+
+### Scope
+Step 6 = the `/app/posts/:id` route shell, editor, autosave to Vocelo, local backup, two-tab conflict, live character counter UI, selection tracking, signed-out dialog, "not a draft in Buffer" banner, Cmd/Ctrl+S, "Feeling stuck?" hint, delete post. **Not Step 6:** counting logic (B2), Save draft button + messages (B11), status sync (B12), channel picker (B7), playback (Step 7), reactions/Tone read (Step 8), version panel (Step 9), usage meter (P15), past_due banner (P11). **Stretch:** rich text, floating selection toolbar, other shortcuts, built-in voice-to-text.
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Editor | Plain auto-growing `<textarea>`. No rich text. |
+| Autosave | Text autosaves to **Vocelo only** (`posts.text`), ~1 s after typing stops. Buffer is still saved only by an explicit **Save draft**. `last_edited_at` changes only when the text actually changes (opening a post never bumps it). No usage, no Buffer write, no cap. |
+| Status wording | "Saving…" · "Saved in Vocelo" · "Not in Buffer yet" (no `buffer_post_id`) · "Changes not in Buffer yet" (text ≠ latest version). The UI **never says "unsaved"**: it always means "not in Buffer". |
+| Single source of truth | `posts.text` in the DB. Save draft, Read aloud, highlight-to-hear, reactions, and Tone read call the editor's `flush()` (await pending autosave) and the server reads the text from the DB. Highlight sends `{ start, end, text }`; the server checks `text` against the stored slice and rejects a mismatch. The editor stays editable during a save; text typed after the flush shows "Changes not in Buffer yet". B8's `saveDraft(postId)` signature is unchanged. |
+| Normalization | One shared `normalizeText()` in `src/lib/text.ts`: `\r\n` → `\n`, NFC, **no trim**. Used by the client and server before storing, counting, and hashing (`textHash()`, sha256). `isBlank()` (trim) is the only place whitespace is ignored. |
+| Empty posts | Allowed and shown on the dashboard as "Empty post" (deletable). While blank: Save draft, Read aloud, reactions, and Tone read disabled. No minimum length. |
+| Hard cap | **20,000 characters** (2× Substack). Editor refuses input past it ("Posts can be up to 20,000 characters."); server rejects autosaves over it. |
+| Character counter | Renders `countFor` on every keystroke (no debounce): `1,234 / 3,000`. Over: "12 over X's 280 limit. Saving is blocked until it fits." in `$tone-negative`. No warning band. Mastodon without `maxCharacters`: "500 (server default)". Changing channel before the first save recounts. |
+| Local backup | While the server hasn't confirmed an autosave, text is mirrored to `localStorage` key `vocelo:draft:{userId}:{postId}` (with a timestamp); cleared on confirm. On open, a local copy that differs and is newer than `last_edited_at` loads into the editor with "Restored unsaved text from this browser" and autosaves. Expires after 7 days. All storage access wrapped in try/catch. |
+| Autosave failure | Retry at 2 / 5 / 10 / 30 s (then every 30 s): "Couldn't save. Retrying…". `beforeunload` warning **only** while text is unsynced. |
+| Signed out mid-edit | One dialog for `BUFFER_AUTH_EXPIRED` and an expired/cleared session (`UNAUTHENTICATED`; a dead token clears the session, so autosave fails first): "You've been signed out. Sign in again; your text is kept here." → `/auth/buffer/start?returnTo=/app/posts/:id`. Signing in as a different account → 404; the backup is keyed by `userId`, so it never shows for another account. |
+| Two tabs | Autosave sends the `last_edited_at` it loaded (`baseEditedAt`). Server has a newer value → `EDIT_CONFLICT`; editor pauses autosave and shows "This post changed in another tab." with **Load latest** / **Keep mine** (overwrite). |
+| Selection | Remembered on `select` / `mouseup` / `keyup` so clicking a panel button (which blurs the textarea) keeps it. Whitespace-only = no selection. Any text change clears it. The panel button reads "Read aloud" or "Hear selection (N chars)". No floating toolbar. |
+| Cmd/Ctrl+S | Triggers Save draft and blocks the browser save. When saving is disabled, shows the reason (e.g. the over-limit message). No other shortcuts. |
+| Not a draft in Buffer | Status `needs_approval` / `scheduled` / `sending` / `sent` / `error`: text stays editable; banner on open: "This post is {status} in Buffer. Edits here won't change it; use Save as a new draft." |
+| Read-only + access | **Sample post:** read-only editor (no channel picker, Save, autosave, or delete-confirm changes), LinkedIn counter, "Start your own post". **Locked post** by URL → redirect to `/app` with "This post is locked on your plan". **Another user's or deleted post** → 404. |
+| Gone while open | Autosave/action returns `POST_NOT_FOUND` or `POST_LOCKED` → editor turns read-only, "This post was deleted." / "This post is locked on your plan.", **Copy text** button; local backup kept; nothing recreated. |
+| Delete post | Composer "Delete post" with confirm: "Deletes it from Vocelo only. Your Buffer draft stays." Deletes post, versions, reactions, Tone reads; `usage_events` keep their rows with `post_id = NULL` (no refund). Works on the sample post. Redirects to `/app`. Step 10's dashboard delete reuses the same server function. |
+| "Feeling stuck?" | One line under the editor, **only while the post is blank**: links to Wispr Flow (external) and OS dictation (macOS: press Fn twice; Windows: Win+H). |
+| Plans | **Identical and unlimited on every plan**: typing, autosave, counting, creating posts, delete, hint. The composer never consumes usage. Plan differences appear only via P15 (meter), P11 (past_due banner), and the right-hand panel (Steps 7/8). |
+
+### Schema additions
+None. `posts.text` and `posts.last_edited_at` already exist.
+
+### Conflicts flagged
+- **Step 3 (sign-in):** the reconnect-only `localStorage` restore becomes a general local backup (any unsynced text), and the dialog also covers a plain expired session.
+- **Step 4 B11:** Save draft must `await flush()` first → blocked by C4. Cmd/Ctrl+S (C11) calls the same handler.
+- **Step 7 (playback) / Step 8 (reactions):** read text from the DB after `flush()`; highlight sends `{ start, end, text }`, server verifies the slice. Hashes use `textHash(normalizeText(text))`. If Step 8 makes prompts channel-aware, the channel must join the reaction cache key (today a pre-save channel change keeps existing reactions valid).
+- **Step 9 (versions):** "Restore loads text as unsaved" now means: restored text is autosaved to Vocelo (no version row) and shows "Changes not in Buffer yet".
+- **Step 10 (pages):** dashboard shows blank posts as "Empty post"; dashboard delete reuses C13's server function.
+- **Critical path:** Lane C's "Composer editor + char limits" = render only; counting is B2.
+
+### Tickets
+Step 6 drafts 14 tickets (`context/tickets/06-composer.md`).
+
+---
+
 ## MVP
 
 ### 1. Infrastructure
@@ -491,6 +536,7 @@ Step 5 drafts 15 tickets (`context/tickets/05-billing.md`).
 | Sign-in | State mismatch rejected; `returnTo` allowlist; each `/auth/error` reason; missing scopes rejected; PKCE exchange; upsert by `buffer_account_id` (concurrent callbacks → one user); refresh rotation with the DB lock (two concurrent refreshes → one Buffer call); dead token ends session, temporary error doesn't; 401 and `UNAUTHORIZED` both retry once; sign out vs. disconnect; `/__dev/login` 404s in production |
 | Buffer drafts | Create; `editPost` sends only `id` + `text` (assets never sent); double-save → one Buffer draft; draft deleted in Buffer → recreated; not `draft` → blocked + "Save as a new draft"; channel disconnected/locked → saving disabled; unchanged text skips Buffer; version written only on changed-text save; `MutationError` message shown; import once (unique constraint), sets import time + version 1; unsupported channels disabled; 31st Buffer write in an hour rejected |
 | Character limits | At the limit, over by 1, per channel; X weighted count, LinkedIn URL = 24, Bluesky graphemes, emoji = 2 UTF-16, Mastodon `maxCharacters`; server re-checks on save; over-limit import blocks saving |
+| Composer | `normalizeText` (CRLF, NFC, no trim) + same hash on client and server; autosave bumps `last_edited_at` only on change; 20,000 cap; `EDIT_CONFLICT` on stale `baseEditedAt`; local backup restore + expiry + keyed by user; signed-out dialog keeps text; sample read-only; locked → redirect, other user's → 404; delete keeps `usage_events` with `post_id = NULL` |
 | Usage + plans | Check-then-consume is atomic (concurrent requests can't overspend); refund on provider failure; "too big for what's left" blocks with no partial read; cached replays, imports, and the sample post never count; first billable action counts the post once per period; Free vs. Creator limits; effective plan for `active` / `trialing` / `past_due` / canceled |
 | Usage periods | Signup on the 31st resets on the last day of shorter months; upgrade starts a new period; cancel keeps paid until period end |
 | History window | `last_edited_at` at 29 / 30 / 31 days (Free) and 12 months (Creator); sample post exempt; upgrade reveals locked posts; Free sees last 3 versions only (others hidden, not deleted) |
@@ -570,9 +616,11 @@ Full rules: "Step 4 Decisions".
 - [ ] 30 Buffer writes / hour / user safety cap
 
 ### 5. Composer
-- [ ] Text editor with selection tracking
+Full rules: "Step 6 Decisions". Tickets: `context/tickets/06-composer.md`.
+- [ ] Plain textarea editor with selection tracking; autosave to Vocelo (Buffer only on "Save draft"), local backup, two-tab conflict prompt
+- [ ] Signed-out dialog that keeps text; "not a draft in Buffer" banner; Cmd/Ctrl+S; delete post
 - [ ] **Per-channel character limits** (X: 280, etc.) with a live count; block saving to a channel when over its limit. Counting comes from Step 4's `src/lib/char-count.ts`; the Composer only renders it
-- [ ] "Feeling stuck?" hint: suggest speaking the post with Wispr Flow or OS dictation, then pasting it in (no built-in voice-to-text in MVP)
+- [ ] "Feeling stuck?" hint (shown only while the post is blank): suggest speaking the post with Wispr Flow or OS dictation, then pasting it in (no built-in voice-to-text in MVP)
 
 ### 6. Personas
 - [ ] Persona model: name, bio, voice avatar (static image/icon), ElevenLabs voice ID, reaction prompt

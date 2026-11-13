@@ -9,7 +9,7 @@ After Step 1 T2/T4/T6/T7, Step 2 I13/I14, Step 3 S3/S10:
     → P2 applySubscription (needs P1) → P3 webhook (needs P2) · P4 checkout session (needs P1)
     → P5 success page (needs P2, P4) · P6 canceled page · P7 portal (needs P1)
     → P8 pricing CTAs (needs P4, P7) · P10 billing settings (needs P7, P9)
-    → P11 past_due banner (needs P10) · P12 limit-reached prompt (needs P4, P9) · P13 locked teaser (needs P4) · P15 composer meter (needs P9, Step 6)
+    → P11 past_due banner (needs P10) · P12 limit-reached prompt (needs P4, P9) · P13 locked teaser (needs P4) · P15 composer meter (needs P9, Step 6 C1)
 ```
 No Step 5 migration: the schema already has every billing column.
 
@@ -180,7 +180,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** past_due keeps Creator; banner only.
-**Blocked by:** P10, Step 6 composer route.
+**Blocked by:** P10, Step 6 C1 (composer route).
 **Files likely touched:** `src/components/PastDueBanner/*`, `src/routes/app/settings/billing.tsx`, `src/routes/app/posts/$id.tsx`, `e2e/billing.spec.ts`
 **Out of scope:** emails (Stripe sends its own).
 
@@ -243,7 +243,7 @@ No Step 5 migration: the schema already has every billing column.
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** as above.
-**Blocked by:** P9, Step 6 composer route.
+**Blocked by:** P9, Step 6 C1 (composer route).
 **Files likely touched:** `src/components/UsageMeter/*`, `src/routes/app/posts/$id.tsx`, `e2e/billing.spec.ts`
 **Out of scope:** visual design.
 

@@ -7,9 +7,9 @@ Drafts for GitHub Issues. Decisions live in `project-bible.md` → "Step 4 Decis
 After Step 3 S4 + S9 (Buffer client + retry) and Step 1 T2/T6:
   B1 schema additions · B2 char count · B3 Buffer read queries        (parallel, max 3 worktrees)
     → B4 Buffer write mutations (needs B3) · B5 channel list service (needs B1, B3) · B6 Buffer write cap (needs B1)
-    → B7 channel picker + new post (needs B5, Step 6 editor route) · B8 first save (needs B2, B4, B6)
+    → B7 channel picker + new post (needs B5, Step 6 C1) · B8 first save (needs B2, B4, B6)
     → B9 save existing draft (needs B8) → B10 save as a new draft (needs B9)
-    → B11 save button + messages (needs B9, Step 6 composer) · B12 status sync on open (needs B3)
+    → B11 save button + messages (needs B9, Step 6 C1 + C4) · B12 status sync on open (needs B3, Step 6 C1)
     → B13 import list (needs B5) → B14 import action (needs B6, B13) → B15 import UI (needs B14)
     → B16 dashboard status badges (needs B1, Step 10 dashboard placeholder)
 ```
@@ -122,7 +122,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): pick a channel → composer opens; empty state renders. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B5, Step 6 composer route.
+**Blocked by:** B5, Step 6 C1 (composer route).
 **Files likely touched:** `src/routes/app/posts/new.tsx`, `src/components/ChannelPicker/*`, `src/server/posts/create-post.ts`, `src/content/copy.ts`, `e2e/new-post.spec.ts`
 **Out of scope:** visual design, editor itself (Step 6).
 
@@ -186,7 +186,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] E2E (Buffer mocked): save → Saved; scheduled → Save as a new draft. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B9, B10, Step 6 composer.
+**Blocked by:** B9, B10, Step 6 C1 (route) + C4 (`flush()` before saving).
 **Files likely touched:** `src/components/SaveDraft/*`, `src/routes/app/posts/$id.tsx`, `src/content/copy.ts`, `e2e/save-draft.spec.ts`
 **Out of scope:** reconnect dialog (Step 6), visual design.
 
@@ -201,7 +201,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 - [ ] Integration tests for each branch; E2E: composer opens when Buffer is mocked as down. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B3, Step 6 composer route.
+**Blocked by:** B3, Step 6 C1 (composer route).
 **Files likely touched:** `src/server/posts/sync-status.ts`, `src/routes/app/posts/$id.tsx`, tests
 **Out of scope:** dashboard badges (B16).
 
