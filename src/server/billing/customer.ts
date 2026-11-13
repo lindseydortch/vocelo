@@ -5,7 +5,10 @@ import { db } from '~/db/client'
 import { users } from '~/db/schema'
 import { stripe } from './stripe'
 
-export type BillingErrorCode = 'STRIPE_CUSTOMER_MISSING' | 'STRIPE_UNAVAILABLE'
+export type BillingErrorCode =
+  | 'STRIPE_CUSTOMER_MISSING'
+  | 'STRIPE_SUBSCRIPTION_MISSING'
+  | 'STRIPE_UNAVAILABLE'
 
 /** Typed Stripe failure the UI can branch on via `code`. */
 export class BillingError extends Error {
@@ -36,16 +39,25 @@ function isUnavailable(error: unknown): boolean {
 }
 
 /** Maps Stripe SDK errors to `BillingError`; anything else passes through. */
-function toBillingError(error: unknown): unknown {
+export function toBillingError(
+  error: unknown,
+  missing: 'customer' | 'subscription' = 'customer',
+): unknown {
   if (
     error instanceof Stripe.errors.StripeInvalidRequestError &&
     error.code === 'resource_missing'
   ) {
-    return new BillingError(
-      'STRIPE_CUSTOMER_MISSING',
-      'Stripe customer no longer exists',
-      { cause: error },
-    )
+    return missing === 'customer'
+      ? new BillingError(
+          'STRIPE_CUSTOMER_MISSING',
+          'Stripe customer no longer exists',
+          { cause: error },
+        )
+      : new BillingError(
+          'STRIPE_SUBSCRIPTION_MISSING',
+          'Stripe subscription no longer exists',
+          { cause: error },
+        )
   }
   if (isUnavailable(error)) {
     return new BillingError('STRIPE_UNAVAILABLE', 'Stripe is unavailable', {
