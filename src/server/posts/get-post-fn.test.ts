@@ -32,10 +32,16 @@ vi.mock('~/db/client', () => ({
     return testDb
   },
 }))
-vi.mock('~/server/buffer/with-buffer', () => ({
-  withBuffer: (_userId: string, fn: (token: string) => Promise<unknown>) =>
-    fn('tok'),
-}))
+const connection = vi.hoisted(() => ({ expired: false }))
+vi.mock('~/server/buffer/with-buffer', async () => {
+  const { BufferAuthExpiredError } = await import('~/server/auth/buffer-token')
+  return {
+    withBuffer: (_userId: string, fn: (token: string) => Promise<unknown>) => {
+      if (connection.expired) throw new BufferAuthExpiredError()
+      return fn('tok')
+    },
+  }
+})
 const { loadPost } = (await import('./get-post-fn')) as unknown as {
   loadPost: (input: { data: { id: string } }) => Promise<{
     status: string
@@ -63,7 +69,10 @@ async function setup() {
   return post
 }
 
-beforeEach(() => server.resetHandlers())
+beforeEach(() => {
+  server.resetHandlers()
+  connection.expired = false
+})
 
 describe('loadPost Buffer sync', () => {
   it('returns the freshly synced status', async () => {
@@ -126,6 +135,14 @@ describe('loadPost Buffer sync', () => {
     expect(result.buffer).toMatchObject({
       status: 'scheduled',
       missingInBuffer: true,
+    })
+  })
+
+  it('rejects with BUFFER_AUTH_EXPIRED when the connection is dead', async () => {
+    const post = await setup()
+    connection.expired = true
+    await expect(loadPost({ data: { id: post.id } })).rejects.toMatchObject({
+      code: 'BUFFER_AUTH_EXPIRED',
     })
   })
 })
