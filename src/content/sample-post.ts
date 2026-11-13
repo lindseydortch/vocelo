@@ -11,5 +11,3 @@ Along the way, we leveraged synergies across the ecosystem to unlock value at sc
 The lesson I keep coming back to: the people closest to the problem usually know the answer before you do. Ask them early, and ask them often.
 
 What's the best advice a customer ever gave you?`
-
-export const SAMPLE_POST_ID = 'sample-post'
