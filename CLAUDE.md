@@ -59,6 +59,10 @@ End every commit message and PR description with its own body text. Leave out al
 - If `gh pr merge` fails, do not assume branch protection is why. Check `gh pr view <PR#> --json mergeable,mergeStateStatus`
   for a merge conflict first. On a conflict, `git fetch origin && git rebase origin/dev`, resolve, run `npm run verify`,
   `git push --force-with-lease`, then retry. Only report "can't merge" after ruling out a conflict.
+- After enabling auto-merge, watch the PR yourself; the human should never have to ask "check CI". Poll
+  `gh pr view <PR#> --json state,mergeStateStatus,statusCheckRollup` (use Monitor or ScheduleWakeup, not a
+  foreground sleep) until CI finishes. Then tell the human once: merged, or which check failed and why.
+  Ignore the post-merge `sweep` job. If CI fails, fix it on the branch and keep watching.
 - The only manual merge is the final `dev` → `main` release PR, done by the human.
 - Never run cleanup yourself. It is automatic: `scripts/ticket-sweep.sh` runs from `ticket-start.sh` and
   `ticket-next.sh` and removes every ticket whose PR merged into `dev` (local worktree and branch, remote branch).
