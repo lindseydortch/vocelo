@@ -22,9 +22,15 @@ export type BufferChannel = {
   timezone: string | null
   isDisconnected: boolean
   isLocked: boolean
+  isQueuePaused: boolean
 }
 
-type PostChannel = { id: string; isDisconnected: boolean; isLocked: boolean }
+type PostChannel = {
+  id: string
+  isDisconnected: boolean
+  isLocked: boolean
+  isQueuePaused: boolean
+}
 
 export type BufferPost = {
   id: string
@@ -46,8 +52,8 @@ type RawPost = {
   channel: PostChannel
 }
 
-const CHANNEL_FIELDS = `id name displayName service type timezone isDisconnected isLocked`
-const POST_FIELDS = `id status dueAt text error { message } assets { id } channel { id isDisconnected isLocked }`
+const CHANNEL_FIELDS = `id name displayName service type timezone isDisconnected isLocked isQueuePaused`
+const POST_FIELDS = `id status dueAt text error { message } assets { id } channel { id isDisconnected isLocked isQueuePaused }`
 
 export function mapStatus(status: string): BufferStatus {
   if (STATUSES.includes(status)) {

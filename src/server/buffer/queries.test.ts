@@ -22,6 +22,7 @@ const channel = {
   timezone: 'America/Chicago',
   isDisconnected: false,
   isLocked: false,
+  isQueuePaused: false,
 }
 
 const post = {
@@ -31,7 +32,12 @@ const post = {
   text: 'hello',
   error: null,
   assets: [{ id: 'a1' }, { id: 'a2' }],
-  channel: { id: 'ch1', isDisconnected: false, isLocked: true },
+  channel: {
+    id: 'ch1',
+    isDisconnected: false,
+    isLocked: true,
+    isQueuePaused: false,
+  },
 }
 
 function respond(data: unknown, capture?: (body: Body) => void) {
@@ -61,6 +67,45 @@ describe('getChannel', () => {
   })
 })
 
+describe('queue-paused flag', () => {
+  it.each([true, false])(
+    'getChannel returns isQueuePaused=%s and requests the field',
+    async (isQueuePaused) => {
+      let body: Body | undefined
+      respond({ channel: { ...channel, isQueuePaused } }, (b) => (body = b))
+      const result = await getChannel('tok', 'ch1')
+      expect(result.isQueuePaused).toBe(isQueuePaused)
+      expect(body?.query).toContain('isQueuePaused')
+    },
+  )
+
+  it.each([true, false])(
+    'getPost returns channel.isQueuePaused=%s and requests the field',
+    async (isQueuePaused) => {
+      let body: Body | undefined
+      respond(
+        { post: { ...post, channel: { ...post.channel, isQueuePaused } } },
+        (b) => (body = b),
+      )
+      const result = await getPost('tok', 'p1')
+      expect(result?.channel.isQueuePaused).toBe(isQueuePaused)
+      expect(body?.query).toContain('isQueuePaused')
+    },
+  )
+})
+
+describe('list queries request the flag too', () => {
+  it('listChannels and listDraftPosts include isQueuePaused', async () => {
+    let body: Body | undefined
+    respond({ channels: [channel] }, (b) => (body = b))
+    await listChannels('tok', 'org1')
+    expect(body?.query).toContain('isQueuePaused')
+    respond({ posts: { edges: [{ node: post }] } }, (b) => (body = b))
+    await listDraftPosts('tok', 'org1', ['ch1'])
+    expect(body?.query).toContain('isQueuePaused')
+  })
+})
+
 describe('channel queries', () => {
   it.each([
     ['listChannels', () => listChannels('tok', 'org1')],
@@ -86,7 +131,7 @@ describe('getPost', () => {
       text: 'hello',
       error: null,
       assetCount: 2,
-      channel: { id: 'ch1', isDisconnected: false, isLocked: true },
+      channel: post.channel,
     })
   })
 
