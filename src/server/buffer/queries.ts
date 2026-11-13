@@ -49,7 +49,7 @@ type RawPost = {
 const CHANNEL_FIELDS = `id name displayName service type timezone isDisconnected isLocked`
 const POST_FIELDS = `id status dueAt text error { message } assets { id } channel { id isDisconnected isLocked }`
 
-function mapStatus(status: string): BufferStatus {
+export function mapStatus(status: string): BufferStatus {
   if (STATUSES.includes(status)) {
     return status as BufferStatus
   }
