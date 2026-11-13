@@ -72,5 +72,6 @@ Tracked as `human` tickets H1–H9 in `context/tickets/00-human.md`. This list i
 4. `stripe listen --skip-verify --forward-to https://localhost:3000/api/stripe/webhook` running; its `whsec_…` matches `STRIPE_WEBHOOK_SECRET`.
 5. Do one dry run of the full demo script, then reset the demo user's usage if needed.
    - Night before: paste each LinkedIn post you'll demo into its own post in the demo account, then run Read aloud (3 voices), Get reaction (3 personas), and Read the tone once. Reactions cache per post and audio caches by text, so the demo replays them free. A post pasted fresh on stage makes live calls (~2–5 s each) and counts as a reviewed post; `DEMO_FALLBACK` does not cover it.
-6. If ElevenLabs or Anthropic fails mid-demo: set `DEMO_FALLBACK=1`, restart, use the sample post.
-7. After the demo: open + merge the `dev` → `main` release PR; check the production URL; fix production-only bugs.
+6. **Scheduling is real.** Before build day, connect a throwaway/test channel to the demo Buffer account (H13). On stage, schedule only to that channel with **Pick a time ~1 week out**, then click **Move back to draft**. Never use Add to queue on a real channel during the demo. After the demo, empty that channel's queue in Buffer (H13).
+7. If ElevenLabs or Anthropic fails mid-demo: set `DEMO_FALLBACK=1`, restart, use the sample post.
+8. After the demo: open + merge the `dev` → `main` release PR; check the production URL; fix production-only bugs.

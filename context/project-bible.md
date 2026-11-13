@@ -98,7 +98,7 @@ The usage/plan module stub is the seam: Lane B calls `checkAndConsume` / `refund
 ### Open questions handed to later grilling sessions
 - ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
 - ~~Step 3 (sign-in)~~ ✅ answered; see "Step 3 Decisions" below
-- **Step 9 (scheduling):** reuse Step 4's pre-save check + `saveDraft`; what Approve & schedule does when Buffer's queue is full (`LimitReachedError`, Buffer Free = 10 scheduled per channel); timezone for `dueAt` (Step 3 stores Buffer's `account.timezone` in `users.timezone`; Step 9 decides how to use it)
+- ~~**Step 9 (scheduling)**~~ ✅ answered; see "Step 9 Decisions" below
 - **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
 
 ---
@@ -300,7 +300,7 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 ### Decisions
 | Topic | Decision |
 |---|---|
-| Scope | Step 4 = channels, character counting, save draft (create/edit), status sync, import. **Approve & schedule is Step 9** and reuses Step 4's save + post-fetch functions. Ideas, images, threads, link cards stay stretch. |
+| Scope | Step 4 = channels, character counting, save draft (create/edit), status sync, import. **Schedule is Step 9** and reuses Step 4's save + post-fetch functions. Ideas, images, threads, link cards stay stretch. |
 | When a Buffer draft exists | Only after an explicit **"Save draft"** click. A Vocelo post can live without `buffer_post_id`. No autosave to Buffer. |
 | New post | `/app/posts/new` requires a channel **before** the post row is created. The channel can change until the first successful save, then locks. Over-limit text stays and blocks saving. |
 | Supported channels | `linkedin`, `twitter`, `substack`, `threads`, `bluesky`, `mastodon`. Unsupported services show **disabled** ("Not supported yet"). `isDisconnected` / `isLocked` channels show disabled ("Reconnect this channel in Buffer"). Zero supported channels → empty state with "Refresh channels". |
@@ -333,7 +333,7 @@ Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 ### Conflicts flagged
 - **Kickoff rule fixed:** "read the draft's current assets and send them back" was wrong; `editPost` keeps omitted assets.
 - **Composer (Step 6):** character counting moved to Step 4 (`src/lib/char-count.ts`); Composer renders it. Composer owns the editor route the Save button lives in.
-- **Versions (Step 9):** version rows are written by Step 4's save (and import). Step 9 = history panel, restore, Approve & schedule (`editPost` with `mode` + `dueAt`, reusing the pre-save check).
+- **Versions (Step 9):** version rows are written by Step 4's save (and import). Step 9 = history panel, restore, Schedule (`editPost` with `mode` + `dueAt`, reusing the pre-save check).
 - **Usage (Step 1 T6):** new `buffer_write` kind + hourly cap lives beside the LLM cap.
 - **Pages (Step 10):** dashboard rows show status badges; import list + empty states live on `/app`.
 - **Seed (Step 2 I12):** the imported draft with 2 images needs `buffer_status = draft` and a version 1.
@@ -555,6 +555,63 @@ Step 8 drafts 11 tickets (`context/tickets/08-reactions-tone.md`) + human ticket
 
 ---
 
+## Step 9 Decisions: Versions + scheduling (agreed 2026-11-13)
+
+The **why** behind each rule: `context/versions-scheduling.md`.
+
+### Buffer facts (developers.buffer.com, checked 2026-11-13)
+- `EditPostInput`: `id`, `text`, `assets`, `metadata`, `tagIds`, `dueAt` (DateTime, ISO 8601 UTC), `mode` (ShareMode; omit = no scheduling change), `saveToDraft` (true = back to draft), `schedulingType`, `approvalChange`.
+- ShareMode values confirmed in docs: `addToQueue` (next free slot in the channel's posting schedule) and `customScheduled` (needs `dueAt`). Share now / share next are mentioned but not confirmed.
+- ✅ **Verified live by H12 (2026-11-13, personal LinkedIn, test post deleted):**
+  - ShareMode enum (introspection): `addToQueue`, `customScheduled`, `shareNext`, `shareNow`. `PostActionPayload` union: `PostActionSuccess`, `NotFoundError`, `UnauthorizedError`, `UnexpectedError`, `RestProxyError`, `LimitReachedError`, `InvalidInputError`.
+  - **`editPost` without `text` is rejected:** `InvalidInputError` "Invalid post: Post must have either text or media." Every scheduling edit must resend the post's text.
+  - `editPost { id, text, mode: customScheduled, dueAt, saveToDraft: false, schedulingType: automatic }` → `scheduled` with that `dueAt`. ✅
+  - **Same call without `saveToDraft: false` returns `PostActionSuccess` but the post stays `draft`** (`dueAt` set). Always send `saveToDraft: false` and check the returned status.
+  - `editPost { id, text, saveToDraft: true }` → `draft`, **but `dueAt` keeps the old value.** Decide "scheduled" from `status`, never from `dueAt`.
+  - `deletePost` → `DeletePostSuccess`; fetching it after → top-level GraphQL error `extensions.code: NOT_FOUND`.
+  - Account timezone `America/Chicago`; org `limits.scheduledPosts` = 5000 (paid Buffer plan, so `LimitReachedError` can't be triggered live; MSW only).
+  - Not tested (risk of publishing to a real channel): `addToQueue`, past `dueAt`.
+- **Not documented:** past/min/max `dueAt` rules; what `addToQueue` does with no posting times; when `LimitReachedError` fires (`Organization.limits.scheduledPosts` holds the cap).
+- `Channel.isQueuePaused`: scheduled posts won't publish. `Channel.timezone` defaults to Europe/London. `deletePost` exists (unused).
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Name | **Schedule** ("Schedule in Buffer"), not "Approve & schedule". No approvals in MVP. Glossary: Schedule, Move back to draft. |
+| Options | **Add to queue** (`addToQueue`, default) and **Pick a time** (`customScheduled` + `dueAt`). Share now, share next, "Change time" = stretch. |
+| One click | `flush()` → `saveDraft` (version if text changed; recreates a deleted draft) → `editPost { id, text, mode, dueAt?, saveToDraft: false, schedulingType: automatic }` (text is required, H12). Counts **1 Buffer write** total. Row lock on the post; dialog button "Scheduling…" + disabled. |
+| Partial failure | Save works, schedule fails → saved draft stays, "Saved as a draft in Buffer, but couldn't schedule: {reason}". No refund (Buffer was written). |
+| Blocks | Same as Save draft: blank, over channel limit, channel disconnected/locked, status not `draft` (no Buffer post yet is fine), sample post, locked post. **No** "hear it first" gate. Same on every plan; never a reviewed post. |
+| Time rules | Pick a time: ≥ **5 min** and ≤ **1 year** ahead, checked in the browser and on the server. Default = next full hour ≥ 5 min away. Passed while the dialog was open → "Pick a time at least 5 minutes from now." |
+| Timezone | Shown in `users.timezone` ?? browser, always labelled ("3:00 PM America/Chicago"). Channel timezone ignored. Dashboard badge + composer use the same formatter. |
+| Queue full | `LimitReachedError` → stays a saved draft: "Buffer says this channel's queue is full: {message}. Remove a scheduled post in Buffer or upgrade your Buffer plan." No pre-check against org limits. |
+| Paused queue | Pre-check reads `isQueuePaused` → non-blocking warning in the dialog and the banner: "This channel's queue is paused in Buffer. It won't post until you resume it there." |
+| Result | Read back `status` + `dueAt`. `scheduled` → "Queued for {time}" / "Scheduled for {time}"; no `dueAt` → "Added to your Buffer queue". `needs_approval` → store it, "Sent for approval in Buffer." Other `MutationError` → Buffer's message verbatim. |
+| Already scheduled in Buffer | Pre-check returns Step 4's `NOT_A_DRAFT`; status stored; banner takes over. Deleted in Buffer → recreated by `saveDraft`, then scheduled. |
+| Banner (updates C10) | Per status: `scheduled` "Scheduled for {time}. Edits here won't change it." + **Move back to draft**, then Save as a new draft · `needs_approval` "Waiting for approval in Buffer." · `sending` "Posting now." · `sent` "Posted." · `error` Buffer's message. Non-scheduled statuses offer Save as a new draft only. |
+| Move back to draft | Fixes a Step 4 conflict (Save as a new draft left the old text scheduled). `getPost` pre-check: `sending`/`sent` → refuse "It's already posting or posted. Save as a new draft instead." · not found → clear `buffer_post_id`, "This post isn't in Buffer anymore. Save draft to create a new one." · already `draft` → store, "Already a draft." · `scheduled` → `editPost { id, text, saveToDraft: true }` (1 Buffer write; text required, H12). Every branch stores the fresh status. |
+| Change time | Not in MVP: Move back to draft, then Schedule again (2 writes). |
+| Version panel | Newest first: time saved, first ~80 chars, char count. Newest gets a status tag: "In Buffer" (draft) · "Scheduled" · "Posted" · "Waiting for approval". Click → full text read-only + **Restore**. Free: newest 3 (T7 `visibleVersions`) + "🔒 N older versions. Upgrade to see them" → Checkout. Creator: all. Hidden on the sample post. Diff view stretch. |
+| Restore | Loads text into the editor (autosaves to Vocelo, no version). Current text ≠ newest version → confirm "Your current text isn't in Buffer and isn't saved as a version. Replace it?" Version equal to current text → disabled "Current". Server rejects hidden versions (`VERSION_LOCKED`). Restoring on a scheduled post is allowed; the banner still applies. On Free, the next save can push the oldest visible version out of view (no warning). |
+| Shortcuts | Cmd/Ctrl+S = Save draft only, never Schedule. |
+| Demo | Schedule only to a test channel with **Pick a time ~1 week out**, then Move back to draft on stage. Empty that queue afterwards (H13, `environments.md`). |
+
+### Schema additions
+None. `posts.buffer_status`, `posts.due_at`, `versions`, `users.timezone` already exist.
+
+### Conflicts flagged
+- **Step 4:** "Save as a new draft" alone on a scheduled post let the old text publish → Move back to draft added (K5/K7). B16's badge uses K3's formatter (B16 now blocked by K3).
+- **Step 6 C10:** generic banner text replaced with per-status messages + an action slot (edited in place; no issue exists yet).
+- **Naming:** "Approve & schedule" renamed to **Schedule** in this file, `pricing-tiers.md`, `GRILLING_GUIDE.md`, Step 4 notes.
+- **Demo script:** schedules to a test channel 1 week out, then moves back to draft (H13).
+- **H12 done (verified live):** scheduling needs `text` + `saveToDraft: false`; moving back leaves a stale `dueAt`.
+- ✅ **Step 4 image rule verified live (2026-11-13):** a LinkedIn draft with 1 image kept its image after `editPost { id, text }`, after scheduling (`text` + `customScheduled` + `saveToDraft: false`), and after moving back to draft (`text` + `saveToDraft: true`). Test draft deleted. So "omit `assets` → kept" holds; only `text` must always be sent. Returned `assets[].id` is `null` (count by list length, B3).
+
+### Tickets
+Step 9 drafts 10 tickets (`context/tickets/09-versions-scheduling.md`) + human tickets H12, H13.
+
+---
+
 ## MVP
 
 ### 1. Infrastructure
@@ -655,7 +712,7 @@ Step 8 drafts 11 tickets (`context/tickets/08-reactions-tone.md`) + human ticket
 | Personas | Standard personas exist via migration; Creator limit of 5 custom (concurrent creates can't make a 6th); Free blocked + `PERSONA_LOCKED`; field validation; edit bumps `updated_at`; soft delete keeps old reactions' names; downgrade locks custom personas |
 | Playback | Audio cache key hit = no ElevenLabs call and no usage; highlight-to-hear consumes only selected characters; over-channel-limit read rejected; stale selection rejected; provider failure refunds; sample post never consumes; `/api/audio` requires sign-in |
 | Reactions + Tone read | Schema-valid JSON parsed; invalid JSON → retry once → friendly error, nothing consumed; cache by text hash; "Text changed: refresh"; 60 LLM calls / hour cap |
-| Versions + scheduling | Version only on successful Buffer save + changed text; restore doesn't rewrite history; schedule with `dueAt` (timezone per Step 9) |
+| Versions + scheduling | Version only on successful Buffer save + changed text; restore doesn't rewrite history; Free sees newest 3 + hidden version restore rejected; restore confirm when text ≠ newest version; Schedule = save + schedule as **1** Buffer write; `dueAt` 5 min–1 year (fixed clock); times shown in `users.timezone` ?? browser incl. a DST change; `LimitReachedError` leaves a saved draft; paused queue warns, doesn't block; `needs_approval` result; Move back to draft branches (scheduled / draft / sent / not found) |
 | Pages | E2E happy path per page; empty, loading, and limit-reached states render; protected routes redirect to sign-in |
 
 #### E2E flows (Playwright)
@@ -663,7 +720,7 @@ Step 8 drafts 11 tickets (`context/tickets/08-reactions-tone.md`) + human ticket
 2. New post → pick channel → over the character limit blocks save → fix → save draft (Buffer mocked)
 3. Free user hits the reviewed-posts limit → upgrade prompt → fixture webhook → Creator → create a custom persona
 4. Edit + save twice → version history → restore → save creates a new version
-5. Approve & schedule (Buffer mocked)
+5. Schedule → "Scheduled for…" banner → Move back to draft (Buffer mocked)
 6. Free user: posts older than 30 days are locked; teaser card shows the count
 - [ ] **Test data + seed script** (`npm run seed`, runs against the Neon `dev` branch, never production)
   - **Text-only post:** a realistic LinkedIn-length post (~800 characters) with a few lines that read differently by persona (e.g., one humblebrag, one unclear sentence)
@@ -752,8 +809,10 @@ Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.m
 - [ ] **Tone read** — one label (fixed list) + summary for the whole post (per-sentence "tone heat map" is stretch)
 
 ### 9. Versions & Publishing
-- [ ] Version history: snapshot + restore (Free: last 3)
-- [ ] Approve & schedule — `editPost` with `mode` + `dueAt`
+Full rules: "Step 9 Decisions"; the why: `context/versions-scheduling.md`. Tickets: `context/tickets/09-versions-scheduling.md`.
+- [ ] Version history panel: preview + restore (Free: newest 3, older locked)
+- [ ] Schedule: "Add to queue" or "Pick a time" (`editPost` with `mode` + `dueAt`), saving the text first
+- [ ] Move back to draft for scheduled posts
 
 ### 10. Pages & Copy
 **Copy is written separately.** Build every page with placeholder copy pulled from one file (e.g., `src/content/copy.ts`), so final copy can be dropped in without touching components.
@@ -762,7 +821,7 @@ Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.m
 - [ ] **Landing page** (`/`)
   - Hero: headline, subhead, "Sign in with Buffer" CTA
   - Problem → solution ("Everyone helps you decide *what* to post. Vocelo shows you how it *lands*.")
-  - How it works (3 steps: write your post → hear it from different personas → fix it, approve, schedule in Buffer)
+  - How it works (3 steps: write your post → hear it from different personas → fix it, schedule in Buffer)
   - Persona showcase (the 3 standard voice avatars, each with a short audio sample)
   - Supported channels (LinkedIn, X, Substack Notes, Threads, Bluesky, Mastodon)
   - Pricing section (or link to `/pricing`); Team shown as "Coming soon"
@@ -783,7 +842,7 @@ Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.m
   - Left: channel picker, editor, per-channel character count, "Feeling stuck?" dictation hint, save draft
   - Right: persona picker, read aloud, highlight-to-hear, reactions, Tone read
   - Version history panel (restore)
-  - Approve & schedule
+  - Schedule in Buffer + Move back to draft
 - [ ] **Personas** (`/app/personas`): standard personas + custom voice avatar builder (locked on Free)
 - [ ] **Settings → Account** (`/app/settings`): Buffer connection status, sign out, disconnect Buffer
 - [ ] **Settings → Billing** (`/app/settings/billing`): current plan, usage meters, upgrade, Stripe Customer Portal link
@@ -796,7 +855,7 @@ Full rules: "Step 7 Decisions". Tickets: `context/tickets/07-personas-playback.m
 - [ ] First-run welcome: point new users to the sample post (from seed data) so they hear a persona within the first minute
 
 ### 11. Demo & Pitch
-- [ ] Demo script (runs on localhost:3000; checklist in `context/environments.md`): Sign in with Buffer (Free) → hit limit → Stripe upgrade → custom persona → review post → approve & schedule
+- [ ] Demo script (runs on localhost:3000; checklist in `context/environments.md`): Sign in with Buffer (Free) → hit limit → Stripe upgrade → custom persona → review post → schedule (Pick a time, 1 week out, test channel) → Move back to draft
 - [ ] Business slide: pricing tiers + unit economics
 
 ### 12. Design Pass (LAST STEP)
@@ -916,7 +975,7 @@ Buffer's API has **no upload endpoint**. Images must be hosted by us at a **publ
 | Page | Route | Purpose | Plan notes |
 |---|---|---|---|
 | Posts dashboard | `/app` | All posts, new post, import Buffer drafts | Free: last 30 days visible, older posts locked |
-| Composer / review | `/app/posts/new`, `/app/posts/:id` | Write, character limits, personas, read aloud, reactions, Tone read, versions, approve & schedule | Usage limits + persona limits by plan |
+| Composer / review | `/app/posts/new`, `/app/posts/:id` | Write, character limits, personas, read aloud, reactions, Tone read, versions, schedule | Usage limits + persona limits by plan |
 | Personas | `/app/personas` | Standard personas + custom voice avatar builder | Custom personas: Creator + Team |
 | Account settings | `/app/settings` | Buffer connection, sign out, disconnect Buffer | |
 | Billing settings | `/app/settings/billing` | Current plan, usage meters, upgrade, Stripe Customer Portal | |

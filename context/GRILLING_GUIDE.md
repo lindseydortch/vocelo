@@ -32,7 +32,7 @@ Read `context/CLAUDE.md` and the docs it lists. Grill me only on **[AREA]**. Go 
 | 6 | **Composer** | Editor, voice-to-text (Scribe + fallback), image upload + compression, character counts | ⚡ Medium |
 | 7 | **Personas + playback** | Standard personas, custom voice avatars, read aloud, highlight-to-hear, audio caching | ⚡ Medium |
 | 8 | **Reactions + tone** | Persona reactions, whole-post tone heat map, prompts, plan gating | ⚡ Medium |
-| 9 | **Versions + scheduling** | Version history, restore, approve & schedule via `editPost` | ⚡ Medium |
+| 9 | **Versions + scheduling** | Version history, restore, Schedule via `editPost` (renamed from "approve & schedule" in Step 9) | ⚡ Medium |
 | 10 | **Pages** | All 15 pages from the sitemap: structure, states, routes (copy written separately) | 💨 Quick |
 | 11 | **Design Pass** | Direction, palette, fonts, logo, avatars, mobile pass | 💨 Quick (do last) |
 

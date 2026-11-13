@@ -8,7 +8,7 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - When an agent ticket needs a human step partway through (paste a key, click through real OAuth), split that step into its own `human` ticket and list it under **Blocked by**. Agents never wait on you mid-ticket.
 - Where each value goes (`.env.local`, Netlify env vars): `context/environments.md`. This file tracks the *work*; that file is the reference.
 
-**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges. H11 runs after Step 8 R3 + R4 merge.
+**Order:** H1, H2, H3, H6 first; they block agent tickets. H4 → H5, H7. H8 before H5. H9 is never blocking. H10 runs after Step 7 V16 merges. H11 runs after Step 8 R3 + R4 merge. H12 ✅ done. H13 before the demo.
 
 ---
 
@@ -131,6 +131,33 @@ Work only the human can do: accounts, dashboards, payments, real-service clicks.
 - [ ] Edit wording in `src/server/prompts/` on a `chore/<N>-tune-prompts` branch; PR to `dev`; the coordinator merges it
 
 **Blocked by:** Step 8 R3, R4; H3.
+**Blocks:** nothing hard; needed before the demo.
+
+---
+
+## H12 · `chore: verify scheduling a Buffer draft via editPost`
+✅ **Done 2026-11-13** by Claude with a personal API key on the personal LinkedIn channel (`addToQueue` skipped: next slot was same-day). Results: `project-bible.md` → Step 9 → Buffer facts. Test post deleted. Don't create a GitHub issue for this one.
+**Labels:** `MVP`, `human`, `buffer`
+**Acceptance criteria**
+- [ ] On a **throwaway/test channel** (H13), in Buffer's API explorer (developers.buffer.com/explorer.html) with a personal key: create a draft with `createPost { saveToDraft: true, ... }`
+- [ ] Try `editPost { id, mode: customScheduled, dueAt: <1 week out, UTC>, saveToDraft: false, schedulingType: automatic }` → note the returned `status` + `dueAt`
+- [ ] If that fails, try without `saveToDraft` and note the result. Also try `mode: addToQueue` (no `dueAt`)
+- [ ] Try `editPost { id, saveToDraft: true }` on the scheduled post → confirm it's a draft again; then delete the test post in Buffer
+- [ ] Paste the working request shapes + any error messages as a comment on this issue and on K2
+
+**Blocked by:** none (needs only a Buffer account + test channel).
+**Blocks:** Step 9 K2.
+
+---
+
+## H13 · `chore: demo test channel for scheduling`
+**Labels:** `MVP`, `human`, `buffer`, `demo`
+**Acceptance criteria**
+- [ ] A throwaway/test social account is connected as a channel in the demo Buffer account (a supported service: e.g. a spare Bluesky or Mastodon account)
+- [ ] Dry run: schedule a post to it with Pick a time ~1 week out, then Move back to draft
+- [ ] After the demo: that channel's queue in Buffer is empty (delete leftover scheduled posts)
+
+**Blocked by:** none for setup; the dry run needs Step 9 K7 merged.
 **Blocks:** nothing hard; needed before the demo.
 
 ---

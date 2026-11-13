@@ -29,7 +29,7 @@
 | Versions kept per post | Last 3 | Unlimited | Unlimited |
 | Locked posts kept before deletion* | 6 months (warning email first). **MVP never deletes**; the cleanup job is stretch | n/a | n/a |
 | Pull from Buffer Ideas* | ✓ | ✓ | ✓ |
-| Approve & schedule | ✓ | ✓ | ✓ + reviewer approvals* |
+| Schedule in Buffer (queue or picked time) | ✓ | ✓ | ✓ + reviewer approvals* |
 | Brand persona pack* | ✗ | ✗ | ✓ |
 
 \* Stretch feature — show as "coming soon" on the pricing page if not built.

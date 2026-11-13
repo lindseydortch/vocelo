@@ -16,6 +16,14 @@ _Avoid_: Post (when you mean the Buffer side), Buffer post
 Sending a Post's current text to its Buffer draft (creating the draft the first time). The only action that writes to Buffer and the only one that creates a Version. Text kept in Vocelo but not yet sent is "not in Buffer yet".
 _Avoid_: Save (on its own), sync, publish, unsaved (when you mean "not in Buffer yet")
 
+**Schedule**:
+Handing a saved Post to Buffer to publish, either in the Channel's queue or at a picked time. Scheduling saves the text to the Buffer draft first.
+_Avoid_: Approve, approve & schedule, publish, post now
+
+**Move back to draft**:
+Taking a scheduled Buffer draft out of Buffer's queue so it is a draft again and won't publish.
+_Avoid_: Unschedule, cancel
+
 **Channel**:
 One connected social account in Buffer (e.g. a LinkedIn page, an X profile) that a Post is written for.
 _Avoid_: Profile, network, platform

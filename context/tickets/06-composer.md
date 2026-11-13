@@ -10,7 +10,7 @@ After Step 1 T2/T7, Step 2 I5/I6/I7/I13/I14, Step 3 S3/S10:
     → C4 editor + autosave hook (needs C1, C3)
     → C5 local backup (needs C4) · C6 conflict prompt (needs C4) · C7 counter (needs C4, Step 4 B2)
     → C8 selection (needs C4) · C9 signed-out dialog (needs C5) · C12 hint (needs C4)
-    → C10 not-a-draft banner (needs C1, Step 4 B12) · C11 Cmd/Ctrl+S (needs C4, Step 4 B11)
+    → C10 not-a-draft banner (needs C1, Step 4 B12, Step 9 K3) · C11 Cmd/Ctrl+S (needs C4, Step 4 B11)
     → C14 post gone while open (needs C4)
 ```
 C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 migration.
@@ -158,17 +158,19 @@ C1 unblocks Step 4 B7, B11, B12 and Step 5 P11, P15. Merge it early. No Step 6 m
 ---
 
 ## C10 · `feat: not-a-draft-in-Buffer banner`
+*(Updated in Step 9: one message per status.)*
 **Labels:** `MVP`, `composer`, `buffer`
 **Acceptance criteria**
-- [ ] When the post's `buffer_status` is `needs_approval`, `scheduled`, `sending`, `sent`, or `error`, C1's top slot shows: "This post is {status} in Buffer. Edits here won't change it; use Save as a new draft."
+- [ ] When `buffer_status` is not `draft`, C1's top slot shows one message per status (from `copy.ts`): `scheduled` → "Scheduled for {due_at via Step 9 K3 `formatInZone`}. Edits here won't change it." · `needs_approval` → "Waiting for approval in Buffer." · `sending` → "Posting now." · `sent` → "Posted." · `error` → Buffer's `error.message`
+- [ ] The banner has an action slot: Step 9 K7 puts "Move back to draft" there for `scheduled`; B11's "Save as a new draft" goes after it
 - [ ] Text stays editable and autosaves
 - [ ] No banner for `draft`, no Buffer post, or the sample post
 - [ ] Component test per status; E2E with a seeded scheduled post. Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** C1; Step 4 B12.
+**Blocked by:** C1; Step 4 B12; Step 9 K3.
 **Files likely touched:** `src/components/BufferStatusBanner/*`, `src/lib/buffer-status.ts`, `src/content/copy.ts`
-**Out of scope:** the "Save as a new draft" button (B11).
+**Out of scope:** the "Save as a new draft" button (B11), the "Move back to draft" button (Step 9 K7), the paused-queue warning (Step 9 K7).
 
 ---
 

@@ -257,13 +257,13 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 ## B16 · `feat: dashboard Buffer status badges`
 **Labels:** `MVP`, `buffer`, `pages`
 **Acceptance criteria**
-- [ ] Each post row shows its last known status: Not in Buffer yet · Draft · Needs approval · Scheduled for {due_at in user timezone} · Sending · Sent · Error
+- [ ] Each post row shows its last known status: Not in Buffer yet · Draft · Needs approval · Scheduled for {due_at via Step 9 K3 `formatInZone`, `users.timezone` ?? browser} · Sending · Sent · Error
 - [ ] No Buffer calls on dashboard load
 - [ ] Unit test for the status → label mapping; E2E: seeded posts render each badge
 - [ ] Works on desktop 1280px+
 
 **Plan behavior:** same on every plan.
-**Blocked by:** B1, Step 10 dashboard placeholder.
+**Blocked by:** B1, Step 9 K3 (time formatter), Step 10 dashboard placeholder.
 **Files likely touched:** `src/components/StatusBadge/*`, `src/lib/buffer-status.ts`, `src/content/copy.ts`, `e2e/dashboard.spec.ts`
 **Out of scope:** refreshing statuses in bulk (never), visual design.
 
@@ -271,7 +271,7 @@ B1 is the only Step 4 migration. Merge it before any other ticket that touches t
 
 ## Noted for later steps (not drafted here)
 - **Live character counter UI** renders `countFor` → Step 6 (Composer)
-- **Approve & schedule** reuses `getPost` pre-check + `saveDraft`; handle `LimitReachedError` (Buffer Free: 10 scheduled per channel) → Step 9
+- ~~**Approve & schedule**~~ → drafted as Step 9 **Schedule** (`context/tickets/09-versions-scheduling.md`)
 - **Version history panel + restore** (rows already written by B8–B10, B14) → Step 9
 - **Seed:** imported 2-image draft needs `buffer_status = draft` + version 1 → Step 2 I12 follow-up
 - **Stretch:** "Load more" on import, X Premium limits, threads, org switching, "Duplicate to another channel", deleting the Buffer draft from Vocelo (`deletePost`)
