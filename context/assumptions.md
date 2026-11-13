@@ -15,3 +15,6 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 | #5 | nice to know | `now()` returns a fresh `Date` copy each call so callers can't mutate the clock. | open |
 | #5 | nice to know | Added `src/test/clock.ts` (`freezeTime` helper), not in the ticket's file list; the ticket asks for "a helper". | open |
 | #5 | nice to know | No CI `test` job added; assumed it belongs to the CI ticket. | open |
+| #152 | need to review | Resolved native blocked-by links are deleted (not just hidden); the `**Blocked by:**` body line is the surviving record. | open |
+| #152 | nice to know | Workflow has no test (YAML only); verified by a local dry run that listed the stale #4 and #49 links. | open |
+| #152 | nice to know | Uses `${{ github.token }}` with `issues: write`; no PAT needed. | open |

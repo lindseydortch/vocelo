@@ -71,6 +71,7 @@ Use this when working on several tickets at once, or when running more than one 
   - **Agent ticket:** closed as *completed* **and** its branch (`<type>/<N>-<slug>`) was merged by PR into `dev` (or `main` for hotfixes). Closing an issue by hand does not count.
   - **`human` ticket:** closed as *completed*.
 - A blocker closed as *not planned* or *duplicate* still blocks. If the dependency really went away, the human removes the link (`gh issue edit <N> --remove-blocked-by <B>`) and edits the body line.
+- **Auto-clear:** `.github/workflows/clear-resolved-blockers.yml` removes a native blocked-by link once its blocker is resolved (same rule as above), so the "Blocked" badge clears on its own. It runs when an issue closes, when a PR merges into `dev`/`main`, or by hand (Actions → Run workflow). The `**Blocked by:**` body line stays, so `ticket-next.sh` is unaffected. Issue-closed events only fire from the default branch, so until this reaches `main` only the PR-merge trigger and manual run work.
 - **Never start a ticket with an unresolved blocker.** `ticket-start.sh` refuses it. There is no override.
 
 ### What can I work on?
