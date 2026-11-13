@@ -26,8 +26,8 @@ What each environment uses, where every secret lives, and the setup and demo-day
 | `SEED_ALLOWED_HOST` | Neon `dev` endpoint host | **never set** | `npm run seed` refuses without a match |
 | `SESSION_SECRET` | random, local-only | random, different | Encrypts the session cookie |
 | `TOKEN_ENCRYPTION_KEY` | random, local-only | random, different | Encrypts Buffer tokens at rest |
-| `BUFFER_CLIENT_ID` / `BUFFER_CLIENT_SECRET` | Dev client | Prod client | Secret only if Buffer issues one (confirm in Step 3) |
-| `BUFFER_API_KEY` | optional, personal key | **never set** | Dev-only fallback for testing Buffer calls without OAuth |
+| `BUFFER_CLIENT_ID` / `BUFFER_CLIENT_SECRET` | Dev client | Prod client | Both required: confidential client + PKCE (Step 3) |
+| `BUFFER_API_KEY` | optional, personal key | **never set** (build fails if set) | Enables `/__dev/login` so worktree ports can sign in without OAuth (Step 3) |
 | `STRIPE_SECRET_KEY` | test key | test key | Live keys are stretch |
 | `STRIPE_WEBHOOK_SECRET` | from `stripe listen` | from the Netlify endpoint in the Stripe dashboard | Different values |
 | `STRIPE_CREATOR_PRICE_ID` | test price | same test price | |

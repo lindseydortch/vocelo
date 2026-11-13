@@ -103,9 +103,9 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 
 ### Open questions handed to later grilling sessions
 - ~~Step 1 (data model)~~ ✅ answered; see "Step 1 Decisions" below
-- **Step 3 (sign-in):** DB lock for single-use refresh tokens; users with multiple Buffer organizations
+- ~~Step 3 (sign-in)~~ ✅ answered; see "Step 3 Decisions" below
 - **Step 5 (billing):** Stripe webhook idempotency; success page loading before the webhook lands; atomic check-then-consume on usage counters
-- **Step 9 (scheduling):** timezone for `dueAt`
+- **Step 9 (scheduling):** timezone for `dueAt` (Step 3 stores Buffer's `account.timezone` in `users.timezone`; Step 9 decides how to use it)
 - **Step 10 (pages):** first-run sample post in production (seed data only exists on the `dev` branch)
 
 ---
@@ -168,9 +168,9 @@ The usage/plan module stub is the seam: Lane B calls `checkUsage` / `consumeUsag
 ### Schema
 | Table | Key columns |
 |---|---|
-| `users` | `id`, `buffer_account_id` (unique), `email?`, `buffer_organization_id`, `plan`, `stripe_customer_id?`, `stripe_subscription_id?`, `subscription_status?`, `current_period_start/end?`, `cancel_at_period_end`, `period_anchor_at`, `created_at` |
+| `users` | `id`, `buffer_account_id` (unique), `email?`, `buffer_organization_id`, `timezone?` (Step 3), `plan`, `stripe_customer_id?`, `stripe_subscription_id?`, `subscription_status?`, `current_period_start/end?`, `cancel_at_period_end`, `period_anchor_at`, `created_at` |
 | `buffer_connections` | `user_id` (1:1), `access_token_enc`, `refresh_token_enc`, `access_expires_at`, `scopes`, `updated_at`. Deleted on Disconnect. |
-| `posts` | `id`, `user_id`, `channel_id`, `channel_service`, `channel_name`, `buffer_post_id?`, `buffer_status?` (draft / scheduled / sent), `due_at?`, `text`, `reaction_persona_id?`, `is_sample`, `created_at`, `last_edited_at`. Unique (`user_id`, `buffer_post_id`). |
+| `posts` | `id`, `user_id`, `buffer_organization_id` (Step 3), `channel_id`, `channel_service`, `channel_name`, `buffer_post_id?`, `buffer_status?` (draft / scheduled / sent), `due_at?`, `text`, `reaction_persona_id?`, `is_sample`, `created_at`, `last_edited_at`. Unique (`user_id`, `buffer_post_id`). |
 | `versions` | `id`, `post_id`, `text`, `text_hash`, `created_at` |
 | `personas` | `id`, `user_id?` (null = standard), `name`, `bio`, `avatar_key`, `elevenlabs_voice_id`, `reader_description`, `reaction_prompt`, `created_at`, `deleted_at?` |
 | `reactions` | `id`, `post_id`, `persona_id`, `text_hash`, `reaction`, `sentiment`, `model`, `created_at`. Unique (`post_id`, `persona_id`, `text_hash`). |
@@ -238,6 +238,56 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
 - **Netlify Blobs in tests:** an in-memory fake behind the audio-store interface → Step 7
 - **E2E sign-in helper** needs the session cookie module → drafted in Step 2 (I14), blocked by Step 3
 - **Webhook ignores unknown customers** (200) → Step 5
+
+---
+
+## Step 3 Decisions: Buffer sign-in (agreed 2026-11-12)
+
+### Buffer facts (developers.buffer.com, checked 2026-11-12)
+- Authorize `https://auth.buffer.com/auth`, token `https://auth.buffer.com/token`. **PKCE (S256) required** for every client. Redirect URIs match character-for-character, HTTPS even on localhost, several allowed per client.
+- Access token ~1 h (`expires_in`). Refresh token only with `offline_access`. **Refresh tokens are single-use; reusing an old one revokes every token for that grant.**
+- **No revocation endpoint.** Users revoke apps in Buffer's settings.
+- `account { id email name timezone organizations { id name ownerEmail } }`: `email` is non-null; an account can belong to **several organizations**; `channels` and `posts` need `organizationId`.
+- Auth errors arrive as HTTP 401 **or** HTTP 200 with `extensions.code: "UNAUTHORIZED"` (docs disagree; handle both). Rate limit per app client: 100 + 10 per authorized user / 15 min; 429 with `retry-after` and `RATE_LIMIT_EXCEEDED`.
+
+### Decisions
+| Topic | Decision |
+|---|---|
+| Client type | **Confidential** (`client_secret` + PKCE). `BUFFER_CLIENT_SECRET` is required. |
+| Scopes | `account:read posts:read posts:write offline_access`. After exchange, if `posts:write` or `offline_access` is missing → `/auth/error?reason=scopes`, no user created. |
+| Start route | `/auth/buffer/start?returnTo=…` sets a 10-min HttpOnly SameSite=Lax state cookie (state, PKCE verifier, `returnTo`). `returnTo` must be a relative path starting `/app` or `/pricing`, else `/app`. |
+| Callback | `/auth/callback` is a **server route that redirects** (no loading UI). Still counts as one of the 15 sitemap pages. |
+| Callback failures | `/auth/error?reason=` `cancelled` (`access_denied`) · `timeout` (state cookie missing/expired/mismatched) · `exchange` (token call failed) · `account` (account lookup failed) · `scopes`. Each logs a request ID. **Nothing is written to the DB until the account lookup succeeds.** |
+| Find-or-create | One transaction upserts `users` on `buffer_account_id` (`ON CONFLICT DO UPDATE`), refreshing email, org, timezone, and `buffer_connections` tokens on every sign-in. New users get `ensureSamplePost(userId)` (stub now, built in Step 10, idempotent). |
+| Organization | Auto-pick the org the user **owns** (`ownerEmail === account.email`), else the first. Switching orgs is **stretch**. `posts.buffer_organization_id` stored now so switching later is safe. Settings shows the connected org. |
+| Session | TanStack Start `useSession`, `SESSION_SECRET`, HttpOnly/Secure/SameSite=Lax, holds only the user ID. **30 days, renewed on each visit.** Every protected request loads the user + `buffer_connections`; either missing = signed out. |
+| Protected routes | `/app` layout `beforeLoad` redirects to `/signin?returnTo=…`; every server function also calls `requireUser()` (never trust the route guard alone). `/signin` with a session → `/app`. |
+| Account switching | Last sign-in wins: the callback replaces the session with whatever account Buffer returned. Not a feature. |
+| Token storage | AES-256-GCM (Node `crypto`), `TOKEN_ENCRYPTION_KEY` (32 bytes, base64), random IV per value, stored as `v1:<iv>:<tag>:<ciphertext>`. Decrypt failure = dead token, never a 500. |
+| Refresh | Only `getBufferAccessToken(userId)` refreshes: `SELECT … FOR UPDATE` on the connection row → re-check expiry after the lock → refresh when < 5 min left → 10 s timeout. |
+| Buffer client | One `bufferClient` for all GraphQL calls. HTTP 401 or `UNAUTHORIZED` → force one refresh, retry once, never loop. 429 / `RATE_LIMIT_EXCEEDED` → temporary error with `retry-after`. Logs `RateLimit` headers when < 10 remain. Sign-in uses **one** GraphQL call. |
+| Refresh failure | **Dead** (`invalid_grant`, revoked, decrypt failure, 401 after retry) → delete `buffer_connections`, clear session, typed `BUFFER_AUTH_EXPIRED`; page loads redirect to `/signin?reason=expired`. **Temporary** (network, 5xx, 429) → keep session, "Buffer isn't responding. Try again in a minute." Read-aloud, reactions, and Tone read keep working. |
+| Lost rotation | If Buffer rotates the token but we time out before saving it, the user signs in again. Accepted; no recovery attempt. |
+| Unsaved text | Server functions return typed `BUFFER_AUTH_EXPIRED` instead of redirecting. **Composer (Step 6)** shows a "Reconnect Buffer" dialog, saves editor text to `localStorage` by post ID, starts OAuth with `returnTo` = the post, and restores the text as unsaved. |
+| Sign out | POST only. Clears the cookie; tokens stay. |
+| Disconnect | POST only. Deletes `buffer_connections` + clears the cookie; posts, plan, personas stay. Confirm dialog: "Your Creator plan keeps billing. Cancel it in Billing first if you want to stop." and "To fully remove access, also remove Vocelo in Buffer → Settings → Connected apps." |
+| Plans | Sign-in behaves the same on every tier. Plan follows `buffer_account_id`. A paid user with a dead token keeps their plan and billing; only Buffer actions stop until they sign in again. New Buffer account = new Free user; merging accounts is support-only. |
+| Email | Stored and refreshed every sign-in; prefills Stripe Checkout `customer_email` (Step 5). No verification. |
+| Timezone | `users.timezone` from `account.timezone`, refreshed every sign-in, nullable (browser timezone fallback). Used by Step 9. |
+| Dev sign-in | `/__dev/login` works only when `BUFFER_API_KEY` is set **and** `NODE_ENV !== 'production'`, else 404. Looks up the account with the personal key, upserts the user, stores the key as the access token with no refresh token, sets the session. Lets worktree ports (3000 + N) click through Buffer features. The Netlify build fails if `BUFFER_API_KEY` is set. |
+
+### Schema additions (additive migration)
+- `users.timezone` (text, nullable)
+- `posts.buffer_organization_id` (text)
+
+### Conflicts flagged
+- **Composer (Step 6):** owns the reconnect dialog + `localStorage` restore for `BUFFER_AUTH_EXPIRED`.
+- **Billing (Step 5):** Disconnect never cancels Stripe; dialog says so. Checkout prefills `customer_email`.
+- **Buffer integration (Step 4):** rate limit is per app client across all users; cache channel/draft lists. Posts store their org ID.
+- **Pages (Step 10):** `/auth/callback` has no UI; Settings shows connected org; `ensureSamplePost` is filled in there.
+
+### Tickets
+Step 3 drafts 15 tickets (`context/tickets/03-sign-in.md`).
 
 ---
 
@@ -330,7 +380,7 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
 #### What every feature area must test
 | Area | Must cover |
 |---|---|
-| Sign-in | State mismatch rejected; PKCE exchange; find-or-create user by `buffer_account_id`; refresh rotation with the DB lock (two concurrent refreshes → one wins); refresh failure ends session; sign out vs. disconnect |
+| Sign-in | State mismatch rejected; `returnTo` allowlist; each `/auth/error` reason; missing scopes rejected; PKCE exchange; upsert by `buffer_account_id` (concurrent callbacks → one user); refresh rotation with the DB lock (two concurrent refreshes → one Buffer call); dead token ends session, temporary error doesn't; 401 and `UNAUTHORIZED` both retry once; sign out vs. disconnect; `/__dev/login` 404s in production |
 | Buffer drafts | Create; overwrite text while **preserving existing assets**; draft deleted in Buffer → recreated; draft scheduled/sent → blocked; channel disconnected → saving disabled; import once (unique constraint); unsupported channels hidden |
 | Character limits | At the limit, over by 1, per channel; over-limit import blocks saving |
 | Usage + plans | Check-then-consume is atomic (concurrent requests can't overspend); refund on provider failure; "too big for what's left" blocks with no partial read; cached replays, imports, and the sample post never count; first billable action counts the post once per period; Free vs. Creator limits; effective plan for `active` / `trialing` / `past_due` / canceled |
@@ -365,19 +415,20 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
   - Buffer OAuth 2.0 (Authorization Code + PKCE)
   - Register an App Client in Buffer Settings → API (redirect URIs for localhost + production)
   - Redirect URIs: `https://localhost:3000/auth/callback` (dev; Buffer requires https, so the dev server runs HTTPS via `@vitejs/plugin-basic-ssl`) and `https://<domain>/auth/callback` (production). Must match exactly, including port. Ticket worktrees run on port `3000 + issue#`, so the Buffer sign-in only completes on port 3000: test OAuth in the main folder or a port-3000 session, or register extra localhost ports.
-  - Scopes: `account:read`, `posts:read`, `posts:write`, `offline_access` (add `ideas:read` with the Ideas stretch goal)
-  - Server route: start auth (`state` + PKCE challenge) → callback (verify `state`, exchange code + verifier)
-  - On callback: query the Buffer `account` to get a stable account ID (+ email if available), then **find or create the Vocelo user keyed by Buffer account ID**
-    - Confirm in the Buffer API Explorer which `account` fields are returned
-  - Create a Vocelo session: encrypted, HttpOnly, Secure, SameSite=Lax cookie holding only the user ID (never Buffer tokens)
-  - Store Buffer access + refresh tokens encrypted in the database, server-side only
-  - Token refresh (~1 hr access tokens; refresh tokens are single-use and rotate, so only one server function refreshes)
-  - If refresh fails or the user revokes access: end the session and send them back to "Sign in with Buffer"
-  - Sign out (clears session) vs. Disconnect (also deletes stored Buffer tokens)
+  - Scopes: `account:read`, `posts:read`, `posts:write`, `offline_access` (add `ideas:read` with the Ideas stretch goal); missing required scopes fail sign-in
+  - Confidential client (`client_secret` + PKCE S256)
+  - Server route: start auth (`state` + PKCE challenge + allowlisted `returnTo`) → callback server route (verify `state`, exchange code + verifier, redirect; no UI)
+  - On callback: one `account` query (id, email, name, timezone, organizations), then **upsert the Vocelo user keyed by Buffer account ID**
+  - Create a Vocelo session: encrypted, HttpOnly, Secure, SameSite=Lax cookie holding only the user ID (never Buffer tokens), 30 days renewed on each visit
+  - Store Buffer access + refresh tokens AES-256-GCM encrypted in the database, server-side only
+  - Token refresh (~1 hr access tokens; refresh tokens are single-use and **reuse revokes everything**, so only `getBufferAccessToken` refreshes, under a row lock)
+  - Dead token (refresh rejected, revoked): delete stored tokens, end the session, send them back to "Sign in with Buffer". Temporary Buffer errors never sign out.
+  - Sign out (clears session) vs. Disconnect (also deletes stored Buffer tokens; Buffer has no revoke endpoint, so the dialog points to Buffer's Connected apps)
   - Protected routes: redirect to sign-in when there's no session
+  - Full rules: "Step 3 Decisions"
 - [ ] Stripe customer linked to the Vocelo user ID (created at first checkout)
-- [ ] Dev-only fallback: personal API key in `.env.local` for local testing (not exposed to users)
-- [ ] Organization lookup → `organizationId` (needed for drafts)
+- [ ] Dev-only fallback: personal API key in `.env.local` powers `/__dev/login` (not exposed to users; build fails if set in Netlify)
+- [ ] Organization lookup → `organizationId` (needed for drafts): auto-pick the owned org, else the first; switching is stretch
 
 ### 3. Billing (Stripe)
 - [ ] Stripe Products/Prices: Creator only (Team shown as "Coming soon"; see `pricing-tiers.md`)
@@ -449,8 +500,8 @@ Step 2 drafts 14 tickets + a bootstrap step (`context/tickets/02-infra.md`).
 
 #### Auth pages
 - [ ] **Sign in** (`/signin`): single "Sign in with Buffer" button + one line on what Vocelo can access
-- [ ] **OAuth callback** (`/auth/callback`): loading state, then redirect to the app
-- [ ] **Auth error**: "Couldn't connect to Buffer" + retry
+- [ ] **OAuth callback** (`/auth/callback`): server route only, redirects to `returnTo` or `/auth/error` (no UI; Step 3)
+- [ ] **Auth error**: one message per `reason` (`cancelled`, `timeout`, `exchange`, `account`, `scopes`) + retry
 
 #### App pages (signed in)
 - [ ] **Posts dashboard** (`/app`): list of posts (status, channel, last edited), "New post" button, Buffer drafts to import, locked history card
@@ -584,7 +635,7 @@ Buffer's API has **no upload endpoint**. Images must be hosted by us at a **publ
 | Page | Route | Purpose |
 |---|---|---|
 | Sign in | `/signin` | "Sign in with Buffer" button + what Vocelo can access |
-| OAuth callback | `/auth/callback` | Loading state while connecting, then redirect to `/app` |
+| OAuth callback | `/auth/callback` | Server route (no UI): exchanges the code, redirects to `returnTo` or `/auth/error` |
 | Auth error | `/auth/error` | "Couldn't connect to Buffer" + retry |
 
 ### App pages (signed in only)
