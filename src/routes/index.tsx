@@ -1,11 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { PublicPage } from '~/components/PublicPage/PublicPage'
+import { Landing } from '~/components/Landing/Landing'
 import { pagesCopy } from '~/content/copy'
 import { pageTitle } from '~/lib/head'
+import { getViewer } from '~/server/auth/viewer'
 
 const page = pagesCopy.home
 
 export const Route = createFileRoute('/')({
   head: () => ({ meta: [{ title: pageTitle(page.title) }] }),
-  component: () => <PublicPage heading={page.heading} body={page.body} />,
+  loader: () => getViewer(),
+  component: Home,
 })
+
+function Home() {
+  const { signedIn } = Route.useLoaderData()
+  return <Landing signedIn={signedIn} />
+}
