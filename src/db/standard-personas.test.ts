@@ -34,6 +34,11 @@ describe('standard personas migration (#25)', () => {
       expect(AVATAR_ICONS.map((a) => a.key)).toContain(r.avatarKey)
     }
     expect(new Set(rows.map((r) => r.elevenlabsVoiceId)).size).toBe(3)
+    expect(rows.map((r) => r.id).sort()).toEqual([
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+      '00000000-0000-4000-8000-000000000003',
+    ])
   })
 
   it('does not duplicate rows when the migration runs a second time', async () => {
