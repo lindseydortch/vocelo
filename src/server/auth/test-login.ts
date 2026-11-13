@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '~/db/client'
 import { bufferConnections, users } from '~/db/schema'
 import { now } from '~/lib/clock'
+import { encryptToken } from './crypto'
 import { setSessionUser } from './session'
 
 export const TEST_USERS = ['free', 'creator'] as const
@@ -60,10 +61,15 @@ async function ensureTestUser(kind: TestLoginUser): Promise<string> {
     .from(users)
     .where(eq(users.bufferAccountId, accountId))
   if (!user) throw new Error('test login: user missing after upsert')
+  // A decryptable, non-expiring token (like the dev API key) so server-side Buffer calls reach the network layer.
+  const accessTokenEnc = encryptToken('e2e-not-a-real-token')
   await db
     .insert(bufferConnections)
-    .values({ userId: user.id, accessTokenEnc: 'e2e-not-a-real-token' })
-    .onConflictDoNothing({ target: bufferConnections.userId })
+    .values({ userId: user.id, accessTokenEnc })
+    .onConflictDoUpdate({
+      target: bufferConnections.userId,
+      set: { accessTokenEnc, accessExpiresAt: null, refreshTokenEnc: null },
+    })
   return user.id
 }
 

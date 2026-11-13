@@ -7,7 +7,7 @@ import styles from './$id.module.scss'
 const copy = composerCopy
 
 function ComposerPage() {
-  const { post, readOnly } = Route.useLoaderData()
+  const { post, readOnly, buffer } = Route.useLoaderData()
   return (
     <main className={styles.page} data-read-only={readOnly}>
       <h1>{copy.title}</h1>
@@ -15,6 +15,8 @@ function ComposerPage() {
         <div data-slot="banners">{copy.slots.banners}</div>
         <div data-slot="meter">{copy.slots.meter}</div>
       </div>
+      {buffer.checkFailed && <p role="status">{copy.bufferCheckFailed}</p>}
+      {buffer.missingInBuffer && <p role="status">{copy.missingInBuffer}</p>}
       {readOnly && <p role="status">{copy.readOnly}</p>}
       <div className={styles.layout}>
         <section data-slot="composer-left" aria-label={post.channelName}>
