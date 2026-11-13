@@ -8,7 +8,7 @@ export default defineConfig({
     testTimeout: 20000,
     hookTimeout: 60000,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'vite.config.test.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/server/**', 'src/lib/**'],
