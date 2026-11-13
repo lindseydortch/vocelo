@@ -1,1 +1,1 @@
-export { Pending } from './Pending'
+export { Pending, PENDING_MS } from './Pending'

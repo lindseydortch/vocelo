@@ -8,8 +8,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PENDING_MS } from '~/router'
-import { Pending } from './Pending'
+import { PENDING_MS, Pending } from './Pending'
 
 function slowRouter(loadMs: number) {
   const root = createRootRoute()

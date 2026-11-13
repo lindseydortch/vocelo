@@ -1,8 +1,6 @@
 import { createRouter } from '@tanstack/react-router'
-import { Pending } from '~/components/Pending'
+import { PENDING_MS, Pending } from '~/components/Pending'
 import { routeTree } from './routeTree.gen'
-
-export const PENDING_MS = 300
 
 export function getRouter() {
   return createRouter({
