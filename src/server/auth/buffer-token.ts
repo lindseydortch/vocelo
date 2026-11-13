@@ -44,15 +44,16 @@ export async function getBufferAccessToken(
     }
     try {
       const access = decryptToken(connection.accessTokenEnc)
-      // Null expiry is the non-expiring personal API key used by dev sign-in.
-      if (
-        !force &&
-        (!connection.accessExpiresAt ||
-          connection.accessExpiresAt.getTime() - now().getTime() >= 300_000)
-      )
-        return access
+      // Null expiry identifies the non-expiring dev personal API key.
+      if (!force && !connection.accessExpiresAt) return access
       if (!connection.refreshTokenEnc) return expire()
       const refresh = decryptToken(connection.refreshTokenEnc)
+      if (
+        !force &&
+        connection.accessExpiresAt &&
+        connection.accessExpiresAt.getTime() - now().getTime() >= 300_000
+      )
+        return access
       try {
         const response = await fetch(TOKEN_URL, {
           method: 'POST',

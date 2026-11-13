@@ -7,6 +7,7 @@ import { bufferConnections } from '~/db/schema'
 import { testDatabaseUrl } from '~/test/db'
 import { createTestUser } from '~/test/factories'
 import { server } from '~/test/msw'
+import { freezeTime } from '~/test/clock'
 
 vi.mock('~/server/env', () => ({
   env: {
@@ -196,3 +197,42 @@ it('aborts refresh after ten seconds and preserves credentials', async () => {
   })
   expect(await stored(id)).toEqual(before)
 })
+
+it.each([null, 'corrupt'])(
+  'rejects unusable refresh credentials even with fresh OAuth access: %s',
+  async (refreshTokenEnc) => {
+    const id = await connection({
+      accessExpiresAt: new Date(Date.now() + 3600_000),
+      refreshTokenEnc,
+    })
+    await expect(getBufferAccessToken(id)).rejects.toMatchObject({
+      code: 'BUFFER_AUTH_EXPIRED',
+    })
+    expect(await stored(id)).toHaveLength(0)
+  },
+)
+
+it.each([299_999, 300_000])(
+  'refreshes only below the five-minute boundary: %s milliseconds left',
+  async (remaining) => {
+    freezeTime('2026-11-13T12:00:00Z')
+    const id = await connection({
+      accessExpiresAt: new Date(Date.parse('2026-11-13T12:00:00Z') + remaining),
+    })
+    let requests = 0
+    server.use(
+      http.post('https://auth.buffer.com/token', () => {
+        requests++
+        return HttpResponse.json({
+          access_token: 'refreshed',
+          refresh_token: 'rotated',
+          expires_in: 3600,
+        })
+      }),
+    )
+    expect(await getBufferAccessToken(id)).toBe(
+      remaining < 300_000 ? 'refreshed' : 'old-access',
+    )
+    expect(requests).toBe(remaining < 300_000 ? 1 : 0)
+  },
+)
