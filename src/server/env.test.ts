@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EnvError, envNames, parseEnv } from './env'
+import { EnvError, parseEnv } from './env'
 
 const valid = {
   APP_URL: 'https://localhost:3000',
