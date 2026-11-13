@@ -73,7 +73,7 @@ describe('getOrCreateCustomer', () => {
 
   it('concurrent first clicks save exactly one customer ID', async () => {
     const user = await free()
-    const { mock, handlers } = stripeCustomerHandlers()
+    const { handlers } = stripeCustomerHandlers()
     server.use(...handlers)
 
     const ids = await Promise.all([
@@ -82,9 +82,9 @@ describe('getOrCreateCustomer', () => {
       getOrCreateCustomer(user),
     ])
 
-    expect(new Set(ids).size).toBe(1)
+    // The mock mints one ID per idempotency key, so a single ID proves the key is sent.
+    expect(ids).toEqual(['cus_mock_1', 'cus_mock_1', 'cus_mock_1'])
     expect(await storedId(user.id)).toBe(ids[0])
-    expect(mock.createCalls.length).toBeGreaterThanOrEqual(1)
   })
 
   it('returns the already-saved ID when another request wins the save', async () => {
@@ -160,6 +160,19 @@ describe('getOrCreateCustomer', () => {
         code: 'STRIPE_UNAVAILABLE',
       })
       expect(await storedId(user.id)).toBeNull()
+    })
+
+    it('5xx on verifying a stored customer → STRIPE_UNAVAILABLE', async () => {
+      const user = await createTestUser({ plan: 'creator' })
+      server.use(
+        http.get(`${STRIPE_API_URL}/v1/customers/:id`, () =>
+          stripeError(500, 'api_error'),
+        ),
+      )
+
+      await expect(getOrCreateCustomer(user)).rejects.toMatchObject({
+        code: 'STRIPE_UNAVAILABLE',
+      })
     })
 
     it('network failure → STRIPE_UNAVAILABLE', async () => {
