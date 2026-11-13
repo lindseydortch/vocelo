@@ -56,6 +56,9 @@ End every commit message and PR description with its own body text. Leave out al
 - Open one PR into `dev` with "Closes #<issue>" and the Testing section filled in, then enable auto-merge:
   `gh pr merge <PR#> --auto --squash`. All ticket PRs into `dev` auto-merge once CI passes; the human does
   not merge them by hand. Never merge any other way. Never run `git merge`.
+- If `gh pr merge` fails, do not assume branch protection is why. Check `gh pr view <PR#> --json mergeable,mergeStateStatus`
+  for a merge conflict first. On a conflict, `git fetch origin && git rebase origin/dev`, resolve, run `npm run verify`,
+  `git push --force-with-lease`, then retry. Only report "can't merge" after ruling out a conflict.
 - The only manual merge is the final `dev` → `main` release PR, done by the human.
 - Never run cleanup yourself. It is automatic: `scripts/ticket-sweep.sh` runs from `ticket-start.sh` and
   `ticket-next.sh` and removes every ticket whose PR merged into `dev` (local worktree and branch, remote branch).
