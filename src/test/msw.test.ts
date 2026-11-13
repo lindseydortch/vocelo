@@ -14,6 +14,10 @@ describe('msw server', () => {
   })
 
   it('fails on a request with no handler', async () => {
-    await expect(fetch('https://api.example.test/unhandled')).rejects.toThrow()
+    const err = await fetch('https://api.example.test/unhandled').catch(
+      (e: Error) => e,
+    )
+    expect(err).toBeInstanceOf(Error)
+    expect(String((err as Error).cause)).toMatch(/\[MSW\].*onUnhandledFrame/)
   })
 })

@@ -1,8 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { now, resetClock, setClock } from './clock'
 import { freezeTime } from '../test/clock'
-
-afterEach(() => resetClock())
 
 describe('clock', () => {
   it('returns the real current time by default', () => {
