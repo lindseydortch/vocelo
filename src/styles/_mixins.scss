@@ -1,0 +1,14 @@
+@use 'variables' as *;
+
+// Desktop-first: base styles target desktop, adapt down with max-width.
+@mixin tablet {
+  @media (max-width: $bp-tablet) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (max-width: $bp-mobile) {
+    @content;
+  }
+}

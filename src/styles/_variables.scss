@@ -1,0 +1,30 @@
+// Placeholder tokens. Grayscale only: real colors arrive in the Design Pass.
+// Components use tokens, never hard-coded colors.
+
+// Colors
+$color-bg: #ffffff;
+$color-surface: #f2f2f2;
+$color-border: #cccccc;
+$color-text: #111111;
+$color-text-muted: #666666;
+$color-primary: #333333; // replaced in Design Pass
+
+// Tone read (sentiment) colors, placeholders
+$tone-positive: #444444;
+$tone-neutral: #777777;
+$tone-negative: #111111;
+
+// Spacing scale (rem; 1rem = 10px)
+$space-1: 0.4rem;
+$space-2: 0.8rem;
+$space-3: 1.2rem;
+$space-4: 1.6rem;
+$space-5: 2.4rem;
+$space-6: 3.2rem;
+$space-7: 4.8rem;
+$space-8: 6.4rem;
+
+// Breakpoints. `em` on purpose: media queries ignore the 62.5% root font size
+// and use the browser default of 16px.
+$bp-tablet: 64em; // 1024px
+$bp-mobile: 48em; // 768px

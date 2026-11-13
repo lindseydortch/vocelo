@@ -20,3 +20,5 @@ Decisions agents made without explicit instruction. PRs auto-merge into `dev`, s
 | #152 | nice to know | Uses `${{ github.token }}` with `issues: write`; no PAT needed. | open |
 | #154 | need to review | Cleanup trigger is `ticket-sweep.sh`, run by `ticket-start.sh` and `ticket-next.sh`, not a daemon or GitHub Action (local worktrees can only be removed locally). Merged tickets stay on disk until the next start/next run. | open |
 | #154 | need to review | Turned on the repo setting "Automatically delete head branches" via the API. | open |
+| #10 | nice to know | Spacing scale is `$space-1`..`$space-8` (0.4rem to 6.4rem); the ticket only said "a rem spacing scale". | open |
+| #10 | nice to know | Placeholder tone colors are grays; the page also sets `body { margin: 0 }` and token colors. Verified via built CSS and SSR output, not a browser (self-signed dev cert blocks the devtools browser). | open |
