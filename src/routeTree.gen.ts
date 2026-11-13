@@ -18,6 +18,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as Char91__testChar93ErrorRouteImport } from './routes/[__test].error'
 import { Route as Char91__testChar93LoginRouteImport } from './routes/[__test].login'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AuthErrorRouteImport } from './routes/auth/error'
 import { Route as ApiAudioKeyRouteImport } from './routes/api/audio/$key'
 import { Route as AppBillingCanceledRouteImport } from './routes/app/billing/canceled'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
@@ -68,6 +69,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AuthErrorRoute = AuthErrorRouteImport.update({
+  id: '/auth/error',
+  path: '/auth/error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAudioKeyRoute = ApiAudioKeyRouteImport.update({
   id: '/api/audio/$key',
   path: '/api/audio/$key',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/error': typeof AuthErrorRoute
   '/app/': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/error': typeof AuthErrorRoute
   '/app': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/__test/error': typeof Char91__testChar93ErrorRoute
   '/__test/login': typeof Char91__testChar93LoginRoute
+  '/auth/error': typeof AuthErrorRoute
   '/app/': typeof AppIndexRoute
   '/api/audio/$key': typeof ApiAudioKeyRoute
   '/app/billing/canceled': typeof AppBillingCanceledRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/__test/error'
     | '/__test/login'
+    | '/auth/error'
     | '/app/'
     | '/api/audio/$key'
     | '/app/billing/canceled'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/__test/error'
     | '/__test/login'
+    | '/auth/error'
     | '/app'
     | '/api/audio/$key'
     | '/app/billing/canceled'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/__test/error'
     | '/__test/login'
+    | '/auth/error'
     | '/app/'
     | '/api/audio/$key'
     | '/app/billing/canceled'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   Char91__testChar93ErrorRoute: typeof Char91__testChar93ErrorRoute
   Char91__testChar93LoginRoute: typeof Char91__testChar93LoginRoute
+  AuthErrorRoute: typeof AuthErrorRoute
   ApiAudioKeyRoute: typeof ApiAudioKeyRoute
   AuthBufferStartRoute: typeof AuthBufferStartRoute
 }
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/auth/error': {
+      id: '/auth/error'
+      path: '/auth/error'
+      fullPath: '/auth/error'
+      preLoaderRoute: typeof AuthErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/audio/$key': {
       id: '/api/audio/$key'
       path: '/api/audio/$key'
@@ -315,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   Char91__testChar93ErrorRoute: Char91__testChar93ErrorRoute,
   Char91__testChar93LoginRoute: Char91__testChar93LoginRoute,
+  AuthErrorRoute: AuthErrorRoute,
   ApiAudioKeyRoute: ApiAudioKeyRoute,
   AuthBufferStartRoute: AuthBufferStartRoute,
 }

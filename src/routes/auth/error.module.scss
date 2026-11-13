@@ -1,0 +1,13 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.page {
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: $space-7 $space-5;
+  color: $color-text;
+
+  @include mobile {
+    padding: $space-5 $space-4;
+  }
+}
