@@ -322,6 +322,38 @@ describe('applySubscription', () => {
     })
   })
 
+  it('a stale ended subscription for a user with none stored leaves the anchor alone', async () => {
+    const { user, customer } = await freeWithCustomer()
+    subs.set(
+      'sub_stale',
+      stripeSubscription({
+        id: 'sub_stale',
+        customer,
+        status: 'canceled',
+        ended_at: secs('2026-01-01T00:00:00Z'),
+      }),
+    )
+
+    await applySubscription('sub_stale')
+
+    expect((await row(user.id)).periodAnchorAt).toEqual(user.periodAnchorAt)
+  })
+
+  it('an unmatched subscription is logged and ignored', async () => {
+    subs.set(
+      'sub_u',
+      stripeSubscription({ id: 'sub_u', customer: 'cus_nobody' }),
+    )
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    expect(await applySubscription('sub_u')).toBe(false)
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('no user'),
+      expect.objectContaining({ subscriptionId: 'sub_u' }),
+    )
+    warn.mockRestore()
+  })
+
   describe('errors', () => {
     it('unknown subscription → STRIPE_SUBSCRIPTION_MISSING', async () => {
       await expect(applySubscription('sub_nope')).rejects.toMatchObject({

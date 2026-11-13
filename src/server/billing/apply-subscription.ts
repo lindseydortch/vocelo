@@ -5,13 +5,12 @@ import { db } from '~/db/client'
 import { users } from '~/db/schema'
 import { now } from '~/lib/clock'
 import { newRequestId } from '~/lib/request-id'
+import { PAID_STATUSES as PAID } from '../plan'
 import { toBillingError } from './customer'
 import { stripe } from './stripe'
 
 type User = typeof users.$inferSelect
 
-/** Statuses that grant Creator (see `getEffectivePlan`). */
-const PAID = ['active', 'trialing', 'past_due']
 /** Statuses that end a paid period and start a fresh Free one. */
 const ENDED = ['canceled', 'unpaid', 'paused', 'incomplete_expired']
 
@@ -33,30 +32,23 @@ async function findUser(
 ): Promise<User | undefined> {
   const customerId =
     typeof sub.customer === 'string' ? sub.customer : sub.customer.id
-  const [byCustomer] = await tx
-    .select()
-    .from(users)
-    .where(eq(users.stripeCustomerId, customerId))
-    .for('update')
   const metadataId = sub.metadata?.userId
-  if (byCustomer) {
-    if (metadataId && metadataId !== byCustomer.id) {
-      console.warn('[billing] metadata userId and customer disagree', {
-        requestId,
-        subscriptionId: sub.id,
-        metadataUserId: metadataId,
-        customerUserId: byCustomer.id,
-      })
-    }
-    return byCustomer
+  const lock = (where: ReturnType<typeof eq>) =>
+    tx.select().from(users).where(where).for('update')
+
+  const [byMetadata] = metadataId ? await lock(eq(users.id, metadataId)) : []
+  if (byMetadata?.stripeCustomerId === customerId) return byMetadata
+
+  const [byCustomer] = await lock(eq(users.stripeCustomerId, customerId))
+  if (byCustomer && byMetadata) {
+    console.warn('[billing] metadata userId and customer disagree', {
+      requestId,
+      subscriptionId: sub.id,
+      metadataUserId: byMetadata.id,
+      customerUserId: byCustomer.id,
+    })
   }
-  if (!metadataId) return undefined
-  const [byMetadata] = await tx
-    .select()
-    .from(users)
-    .where(eq(users.id, metadataId))
-    .for('update')
-  return byMetadata
+  return byCustomer ?? byMetadata
 }
 
 /**
@@ -77,7 +69,13 @@ export async function applySubscription(
 
   return db.transaction(async (tx) => {
     const user = await findUser(tx, sub, requestId)
-    if (!user) return false
+    if (!user) {
+      console.warn('[billing] no user for subscription, ignored', {
+        requestId,
+        subscriptionId: sub.id,
+      })
+      return false
+    }
 
     const stored = user.stripeSubscriptionId
     if (
@@ -100,10 +98,9 @@ export async function applySubscription(
     const item = sub.items.data[0]
     if (!item) throw new Error(`Subscription ${sub.id} has no items`)
 
-    // Reset the Free period once, on the transition out of the paid set.
-    const sameSub = stored === sub.id
+    // Reset the Free period only when the stored subscription itself leaves the paid set.
     const justEnded =
-      ended && !(sameSub && user.subscriptionStatus === sub.status)
+      ended && stored === sub.id && PAID.includes(user.subscriptionStatus ?? '')
     await tx
       .update(users)
       .set({
